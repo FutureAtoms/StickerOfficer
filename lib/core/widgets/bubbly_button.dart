@@ -39,9 +39,10 @@ class _BubblyButtonState extends State<BubblyButton>
       duration: const Duration(milliseconds: 100),
       vsync: this,
     );
-    _scale = Tween(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scale = Tween(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -65,10 +66,9 @@ class _BubblyButtonState extends State<BubblyButton>
       onTapCancel: () => _controller.reverse(),
       child: AnimatedBuilder(
         listenable: _scale,
-        builder: (context, child) => Transform.scale(
-          scale: _scale.value,
-          child: child,
-        ),
+        builder:
+            (context, child) =>
+                Transform.scale(scale: _scale.value, child: child),
         child: Container(
           height: widget.height,
           decoration: BoxDecoration(
@@ -84,35 +84,36 @@ class _BubblyButtonState extends State<BubblyButton>
             ],
           ),
           child: Center(
-            child: widget.isLoading
-                ? SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: widget.textColor ?? Colors.white,
-                    ),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (widget.icon != null) ...[
-                        Icon(
-                          widget.icon,
-                          color: widget.textColor ?? Colors.white,
-                          size: 22,
-                        ),
-                        const SizedBox(width: 10),
-                      ],
-                      Text(
-                        widget.label,
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: widget.textColor ?? Colors.white,
-                          fontSize: 16,
-                        ),
+            child:
+                widget.isLoading
+                    ? SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: widget.textColor ?? Colors.white,
                       ),
-                    ],
-                  ),
+                    )
+                    : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.icon != null) ...[
+                          Icon(
+                            widget.icon,
+                            color: widget.textColor ?? Colors.white,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 10),
+                        ],
+                        Text(
+                          widget.label,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: widget.textColor ?? Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
           ),
         ),
       ),

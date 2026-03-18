@@ -47,10 +47,8 @@ class EditorCanvas extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: GestureDetector(
-          onPanStart: (details) =>
-              onStrokeStart(details.localPosition),
-          onPanUpdate: (details) =>
-              onStrokeUpdate(details.localPosition),
+          onPanStart: (details) => onStrokeStart(details.localPosition),
+          onPanUpdate: (details) => onStrokeUpdate(details.localPosition),
           onPanEnd: (_) => onStrokeEnd(),
           child: CustomPaint(
             painter: _CanvasPainter(
@@ -104,13 +102,13 @@ class _CanvasPainter extends CustomPainter {
     }
 
     // Draw strokes
-    final strokePaint = Paint()
-      ..color = selectedTool == EditorTool.eraser
-          ? Colors.white
-          : AppColors.coral
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
+    final strokePaint =
+        Paint()
+          ..color =
+              selectedTool == EditorTool.eraser ? Colors.white : AppColors.coral
+          ..strokeWidth = 4
+          ..strokeCap = StrokeCap.round
+          ..style = PaintingStyle.stroke;
 
     for (final stroke in strokes) {
       if (stroke.length < 2) continue;
@@ -123,8 +121,7 @@ class _CanvasPainter extends CustomPainter {
 
     // Draw current stroke
     if (currentStroke.length >= 2) {
-      final path = Path()
-        ..moveTo(currentStroke[0].dx, currentStroke[0].dy);
+      final path = Path()..moveTo(currentStroke[0].dx, currentStroke[0].dy);
       for (int i = 1; i < currentStroke.length; i++) {
         path.lineTo(currentStroke[i].dx, currentStroke[i].dy);
       }
@@ -141,7 +138,11 @@ class _CanvasPainter extends CustomPainter {
             fontSize: 28,
             fontWeight: FontWeight.w700,
             shadows: [
-              Shadow(color: Colors.black54, blurRadius: 4, offset: Offset(1, 1)),
+              Shadow(
+                color: Colors.black54,
+                blurRadius: 4,
+                offset: Offset(1, 1),
+              ),
             ],
           ),
         ),
@@ -158,7 +159,8 @@ class _CanvasPainter extends CustomPainter {
 
     for (double x = 0; x < size.width; x += tileSize) {
       for (double y = 0; y < size.height; y += tileSize) {
-        final isEven = ((x / tileSize).floor() + (y / tileSize).floor()) % 2 == 0;
+        final isEven =
+            ((x / tileSize).floor() + (y / tileSize).floor()) % 2 == 0;
         canvas.drawRect(
           Rect.fromLTWH(x, y, tileSize, tileSize),
           isEven ? paint1 : paint2,
@@ -168,9 +170,10 @@ class _CanvasPainter extends CustomPainter {
   }
 
   void _drawPlaceholder(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.pastels[4].withOpacity(0.5)
-      ..style = PaintingStyle.fill;
+    final paint =
+        Paint()
+          ..color = AppColors.pastels[4].withOpacity(0.5)
+          ..style = PaintingStyle.fill;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(
@@ -185,10 +188,11 @@ class _CanvasPainter extends CustomPainter {
     );
 
     // Draw placeholder icon
-    final iconPaint = Paint()
-      ..color = AppColors.purple.withOpacity(0.4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
+    final iconPaint =
+        Paint()
+          ..color = AppColors.purple.withOpacity(0.4)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3;
     final center = Offset(size.width / 2, size.height / 2);
     canvas.drawCircle(center, 30, iconPaint);
 

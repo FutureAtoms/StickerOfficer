@@ -29,9 +29,8 @@ class StickerCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(borderRadius),
-          border: isSelected
-              ? Border.all(color: AppColors.coral, width: 3)
-              : null,
+          border:
+              isSelected ? Border.all(color: AppColors.coral, width: 3) : null,
           boxShadow: [
             BoxShadow(
               color: AppColors.shadowLight,
@@ -46,13 +45,14 @@ class StickerCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
-                child: imageUrl != null
-                    ? Image.network(
-                        imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _placeholder(),
-                      )
-                    : _placeholder(),
+                child:
+                    imageUrl != null
+                        ? Image.network(
+                          imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _placeholder(),
+                        )
+                        : _placeholder(),
               ),
               if (label != null)
                 Padding(

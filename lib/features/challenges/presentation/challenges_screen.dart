@@ -8,9 +8,7 @@ class ChallengesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sticker Challenges'),
-      ),
+      appBar: AppBar(title: const Text('Sticker Challenges')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -89,8 +87,11 @@ class _ChallengeDetailCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.emoji_events_rounded,
-                  color: Colors.white, size: 32),
+              const Icon(
+                Icons.emoji_events_rounded,
+                color: Colors.white,
+                size: 32,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(

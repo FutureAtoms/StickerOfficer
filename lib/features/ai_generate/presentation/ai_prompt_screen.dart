@@ -66,21 +66,21 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
           children: [
             // Hero
             ShaderMask(
-              shaderCallback: (bounds) =>
-                  AppColors.primaryGradient.createShader(bounds),
+              shaderCallback:
+                  (bounds) => AppColors.primaryGradient.createShader(bounds),
               child: Text(
                 'Describe your sticker',
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      color: Colors.white,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.displayLarge?.copyWith(color: Colors.white),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'AI will create 4 variations for you to pick from!',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 24),
             // Input field
@@ -100,53 +100,53 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
                 controller: _controller,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  hintText:
-                      'e.g. "cute cat wearing a top hat, waving hello"',
+                  hintText: 'e.g. "cute cat wearing a top hat, waving hello"',
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.all(20),
                 ),
-                onChanged: (v) =>
-                    ref.read(aiPromptProvider.notifier).state = v,
+                onChanged: (v) => ref.read(aiPromptProvider.notifier).state = v,
               ),
             ),
             const SizedBox(height: 16),
             // Quick suggestions
             Text(
               'Try these:',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: _suggestions.map((s) {
-                return GestureDetector(
-                  onTap: () {
-                    _controller.text = s;
-                    ref.read(aiPromptProvider.notifier).state = s;
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors
-                          .pastels[s.hashCode.abs() % AppColors.pastels.length],
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      s,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
+              children:
+                  _suggestions.map((s) {
+                    return GestureDetector(
+                      onTap: () {
+                        _controller.text = s;
+                        ref.read(aiPromptProvider.notifier).state = s;
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              AppColors.pastels[s.hashCode.abs() %
+                                  AppColors.pastels.length],
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Text(
+                          s,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                );
-              }).toList(),
+                    );
+                  }).toList(),
             ),
             const SizedBox(height: 24),
             // Generate button
@@ -161,9 +161,9 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
             Center(
               child: Text(
                 '3 of 5 free generations remaining today',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
               ),
             ),
             const SizedBox(height: 24),
@@ -188,13 +188,10 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
                     },
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors
-                            .pastels[index % AppColors.pastels.length],
+                        color:
+                            AppColors.pastels[index % AppColors.pastels.length],
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.transparent,
-                          width: 3,
-                        ),
+                        border: Border.all(color: Colors.transparent, width: 3),
                       ),
                       child: Center(
                         child: Column(

@@ -48,8 +48,8 @@ class MyPacksScreen extends ConsumerWidget {
               child: Text(
                 'Recently Exported',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.whatsappGreen,
-                    ),
+                  color: AppColors.whatsappGreen,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -59,38 +59,39 @@ class MyPacksScreen extends ConsumerWidget {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: 3,
-                itemBuilder: (context, index) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Container(
-                    width: 80,
-                    decoration: BoxDecoration(
-                      color: AppColors.pastels[index],
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.whatsappGreen.withOpacity(0.3),
-                        width: 2,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.check_circle_rounded,
-                          color: AppColors.whatsappGreen,
-                          size: 24,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Pack ${index + 1}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                itemBuilder:
+                    (context, index) => Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Container(
+                        width: 80,
+                        decoration: BoxDecoration(
+                          color: AppColors.pastels[index],
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppColors.whatsappGreen.withOpacity(0.3),
+                            width: 2,
                           ),
                         ),
-                      ],
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.whatsappGreen,
+                              size: 24,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Pack ${index + 1}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -103,9 +104,7 @@ class MyPacksScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Expanded(
-              child: _PacksList(),
-            ),
+            Expanded(child: _PacksList()),
           ],
         ),
       ),
@@ -145,16 +144,16 @@ class _PacksList extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 'Create a new pack!',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.purple,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(color: AppColors.purple),
               ),
               const SizedBox(height: 4),
               Text(
                 'Add stickers and share on WhatsApp',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -229,8 +228,10 @@ class _PackListItem extends StatelessWidget {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.edit_rounded,
-                    color: AppColors.textSecondary),
+                icon: const Icon(
+                  Icons.edit_rounded,
+                  color: AppColors.textSecondary,
+                ),
                 onPressed: () {},
               ),
             ],

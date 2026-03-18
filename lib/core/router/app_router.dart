@@ -26,27 +26,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/home',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: FeedScreen(),
-            ),
+            pageBuilder:
+                (context, state) => const NoTransitionPage(child: FeedScreen()),
           ),
           GoRoute(
             path: '/explore',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: SearchScreen(),
-            ),
+            pageBuilder:
+                (context, state) =>
+                    const NoTransitionPage(child: SearchScreen()),
           ),
           GoRoute(
             path: '/my-packs',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: MyPacksScreen(),
-            ),
+            pageBuilder:
+                (context, state) =>
+                    const NoTransitionPage(child: MyPacksScreen()),
           ),
           GoRoute(
             path: '/profile',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ProfileScreen(),
-            ),
+            pageBuilder:
+                (context, state) =>
+                    const NoTransitionPage(child: ProfileScreen()),
           ),
         ],
       ),

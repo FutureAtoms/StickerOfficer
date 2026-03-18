@@ -10,12 +10,15 @@ class HuggingFaceApiService {
   final Dio _dio;
 
   HuggingFaceApiService({Dio? dio})
-      : _dio = dio ??
-            Dio(BaseOptions(
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
               baseUrl: _baseUrl,
               connectTimeout: const Duration(seconds: 30),
               receiveTimeout: const Duration(seconds: 60),
-            ));
+            ),
+          );
 
   /// Generate sticker images from a text prompt
   /// Returns up to [count] variations
@@ -41,9 +44,7 @@ class HuggingFaceApiService {
             },
           },
           options: Options(
-            headers: {
-              if (apiKey != null) 'Authorization': 'Bearer $apiKey',
-            },
+            headers: {if (apiKey != null) 'Authorization': 'Bearer $apiKey'},
             responseType: ResponseType.bytes,
           ),
         );

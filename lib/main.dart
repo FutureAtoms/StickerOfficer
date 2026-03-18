@@ -7,16 +7,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Lock to portrait mode for consistent sticker editing
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   // TODO: Initialize Firebase when configured
   // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  runApp(
-    const ProviderScope(
-      child: StickerOfficerApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: StickerOfficerApp()));
 }

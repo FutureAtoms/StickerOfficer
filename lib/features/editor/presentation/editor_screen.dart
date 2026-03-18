@@ -10,7 +10,9 @@ import 'widgets/editor_toolbar.dart';
 
 enum EditorTool { none, lasso, brush, eraser, text, transform }
 
-final selectedToolProvider = StateProvider<EditorTool>((ref) => EditorTool.none);
+final selectedToolProvider = StateProvider<EditorTool>(
+  (ref) => EditorTool.none,
+);
 final brushSizeProvider = StateProvider<double>((ref) => 10.0);
 final isProcessingProvider = StateProvider<bool>((ref) => false);
 
@@ -82,9 +84,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
           content: TextField(
             controller: controller,
             autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Type your text...',
-            ),
+            decoration: const InputDecoration(hintText: 'Type your text...'),
           ),
           actions: [
             TextButton(
@@ -107,108 +107,111 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   void _aiStyleTransfer() {
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'AI Style Transfer',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
+      builder:
+          (ctx) => Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _StyleChip(label: 'Cartoon', color: AppColors.coral),
-                _StyleChip(label: 'Anime', color: AppColors.purple),
-                _StyleChip(label: 'Pixel Art', color: AppColors.teal),
-                _StyleChip(label: 'Watercolor', color: Colors.blue),
-                _StyleChip(label: 'Pop Art', color: Colors.orange),
+                Text(
+                  'AI Style Transfer',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _StyleChip(label: 'Cartoon', color: AppColors.coral),
+                    _StyleChip(label: 'Anime', color: AppColors.purple),
+                    _StyleChip(label: 'Pixel Art', color: AppColors.teal),
+                    _StyleChip(label: 'Watercolor', color: Colors.blue),
+                    _StyleChip(label: 'Pop Art', color: Colors.orange),
+                  ],
+                ),
+                const SizedBox(height: 24),
               ],
             ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
   void _aiCaption() {
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'AI Caption Suggestions',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 16),
-            ...['LOL 😂', 'Mood 💅', 'Not today 🙅', 'Send help 🆘'].map(
-              (caption) => ListTile(
-                title: Text(caption),
-                trailing: const Icon(Icons.add_rounded),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+      builder:
+          (ctx) => Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'AI Caption Suggestions',
+                  style: Theme.of(context).textTheme.headlineMedium,
                 ),
-                onTap: () {
-                  setState(() {
-                    _overlayText = caption;
-                  });
-                  Navigator.pop(ctx);
-                },
-              ),
+                const SizedBox(height: 16),
+                ...['LOL 😂', 'Mood 💅', 'Not today 🙅', 'Send help 🆘'].map(
+                  (caption) => ListTile(
+                    title: Text(caption),
+                    trailing: const Icon(Icons.add_rounded),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    onTap: () {
+                      setState(() {
+                        _overlayText = caption;
+                      });
+                      Navigator.pop(ctx);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
   void _saveSticker() {
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Save Sticker',
-              style: Theme.of(context).textTheme.headlineMedium,
+      builder:
+          (ctx) => Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Save Sticker',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 20),
+                BubblyButton(
+                  label: 'Save to Pack',
+                  icon: Icons.folder_rounded,
+                  color: AppColors.coral,
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Sticker saved to pack!')),
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                BubblyButton(
+                  label: 'Add to WhatsApp',
+                  icon: Icons.chat_rounded,
+                  color: AppColors.whatsappGreen,
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    context.push('/my-packs');
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
-            const SizedBox(height: 20),
-            BubblyButton(
-              label: 'Save to Pack',
-              icon: Icons.folder_rounded,
-              color: AppColors.coral,
-              onPressed: () {
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Sticker saved to pack!')),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            BubblyButton(
-              label: 'Add to WhatsApp',
-              icon: Icons.chat_rounded,
-              color: AppColors.whatsappGreen,
-              onPressed: () {
-                Navigator.pop(ctx);
-                context.push('/my-packs');
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -227,9 +230,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.undo_rounded),
-            onPressed: _strokes.isNotEmpty
-                ? () => setState(() => _strokes.removeLast())
-                : null,
+            onPressed:
+                _strokes.isNotEmpty
+                    ? () => setState(() => _strokes.removeLast())
+                    : null,
           ),
           IconButton(
             icon: const Icon(Icons.check_rounded),
@@ -333,9 +337,9 @@ class _StyleChip extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       onPressed: () {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Applying $label style...')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Applying $label style...')));
       },
     );
   }

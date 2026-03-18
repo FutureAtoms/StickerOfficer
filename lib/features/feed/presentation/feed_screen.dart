@@ -23,14 +23,14 @@ class FeedScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   ShaderMask(
-                    shaderCallback: (bounds) =>
-                        AppColors.primaryGradient.createShader(bounds),
+                    shaderCallback:
+                        (bounds) =>
+                            AppColors.primaryGradient.createShader(bounds),
                     child: Text(
                       'StickerOfficer',
-                      style:
-                          Theme.of(context).textTheme.displayLarge?.copyWith(
-                                color: Colors.white,
-                              ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.displayLarge?.copyWith(color: Colors.white),
                     ),
                   ),
                   const Spacer(),
@@ -49,22 +49,19 @@ class FeedScreen extends ConsumerWidget {
                   _TabPill(
                     label: 'Trending',
                     isActive: selectedTab == 0,
-                    onTap: () =>
-                        ref.read(feedTabProvider.notifier).state = 0,
+                    onTap: () => ref.read(feedTabProvider.notifier).state = 0,
                   ),
                   const SizedBox(width: 8),
                   _TabPill(
                     label: 'For You',
                     isActive: selectedTab == 1,
-                    onTap: () =>
-                        ref.read(feedTabProvider.notifier).state = 1,
+                    onTap: () => ref.read(feedTabProvider.notifier).state = 1,
                   ),
                   const SizedBox(width: 8),
                   _TabPill(
                     label: 'Challenges',
                     isActive: selectedTab == 2,
-                    onTap: () =>
-                        ref.read(feedTabProvider.notifier).state = 2,
+                    onTap: () => ref.read(feedTabProvider.notifier).state = 2,
                   ),
                 ],
               ),
@@ -72,9 +69,10 @@ class FeedScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             // Feed content
             Expanded(
-              child: selectedTab == 2
-                  ? _ChallengesTab()
-                  : _StickerGrid(isTrending: selectedTab == 0),
+              child:
+                  selectedTab == 2
+                      ? _ChallengesTab()
+                      : _StickerGrid(isTrending: selectedTab == 0),
             ),
           ],
         ),
@@ -130,9 +128,7 @@ class _StickerGrid extends StatelessWidget {
     final items = List.generate(
       20,
       (i) => _PackPreview(
-        name: isTrending
-            ? 'Trending Pack ${i + 1}'
-            : 'Recommended ${i + 1}',
+        name: isTrending ? 'Trending Pack ${i + 1}' : 'Recommended ${i + 1}',
         stickerCount: (i % 8) + 3,
         likes: isTrending ? (100 - i * 3) : (50 + i * 2),
         colorIndex: i % AppColors.pastels.length,
@@ -324,8 +320,11 @@ class _ChallengeCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              const Icon(Icons.emoji_events_rounded,
-                  color: Colors.white, size: 28),
+              const Icon(
+                Icons.emoji_events_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
             ],
           ),
           const SizedBox(height: 12),

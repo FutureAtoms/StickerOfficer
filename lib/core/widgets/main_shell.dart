@@ -36,49 +36,50 @@ class MainShell extends StatelessWidget {
   void _showCreateSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Create a Sticker',
-              style: Theme.of(context).textTheme.headlineMedium,
+      builder:
+          (ctx) => Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Create a Sticker',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 24),
+                _CreateOption(
+                  icon: Icons.photo_camera_rounded,
+                  label: 'From Photo',
+                  color: AppColors.coral,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push('/editor');
+                  },
+                ),
+                const SizedBox(height: 12),
+                _CreateOption(
+                  icon: Icons.auto_awesome_rounded,
+                  label: 'AI Generate',
+                  color: AppColors.purple,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push('/ai-generate');
+                  },
+                ),
+                const SizedBox(height: 12),
+                _CreateOption(
+                  icon: Icons.dashboard_customize_rounded,
+                  label: 'From Template',
+                  color: AppColors.teal,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push('/editor');
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
-            const SizedBox(height: 24),
-            _CreateOption(
-              icon: Icons.photo_camera_rounded,
-              label: 'From Photo',
-              color: AppColors.coral,
-              onTap: () {
-                Navigator.pop(ctx);
-                context.push('/editor');
-              },
-            ),
-            const SizedBox(height: 12),
-            _CreateOption(
-              icon: Icons.auto_awesome_rounded,
-              label: 'AI Generate',
-              color: AppColors.purple,
-              onTap: () {
-                Navigator.pop(ctx);
-                context.push('/ai-generate');
-              },
-            ),
-            const SizedBox(height: 12),
-            _CreateOption(
-              icon: Icons.dashboard_customize_rounded,
-              label: 'From Template',
-              color: AppColors.teal,
-              onTap: () {
-                Navigator.pop(ctx);
-                context.push('/editor');
-              },
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -155,9 +156,9 @@ class _CreateOption extends StatelessWidget {
               const SizedBox(width: 16),
               Text(
                 label,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: color,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(color: color),
               ),
               const Spacer(),
               Icon(Icons.arrow_forward_ios_rounded, color: color, size: 18),

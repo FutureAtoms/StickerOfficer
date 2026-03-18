@@ -132,9 +132,7 @@ class _ToolButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
-            border: isSelected
-                ? Border.all(color: color, width: 2)
-                : null,
+            border: isSelected ? Border.all(color: color, width: 2) : null,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

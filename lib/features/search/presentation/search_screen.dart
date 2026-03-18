@@ -33,8 +33,8 @@ class SearchScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: TextField(
-                  onChanged: (v) =>
-                      ref.read(searchQueryProvider.notifier).state = v,
+                  onChanged:
+                      (v) => ref.read(searchQueryProvider.notifier).state = v,
                   decoration: const InputDecoration(
                     hintText: 'Search stickers, packs, creators...',
                     prefixIcon: Icon(Icons.search_rounded),
@@ -116,26 +116,28 @@ class SearchScreen extends ConsumerWidget {
               child: Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: [
-                  '#reaction',
-                  '#cute',
-                  '#funny',
-                  '#mood',
-                  '#anime',
-                  '#kawaii',
-                  '#meme',
-                  '#love',
-                  '#cat',
-                  '#dog',
-                ].map((tag) => _TagChip(tag: tag)).toList(),
+                children:
+                    [
+                      '#reaction',
+                      '#cute',
+                      '#funny',
+                      '#mood',
+                      '#anime',
+                      '#kawaii',
+                      '#meme',
+                      '#love',
+                      '#cat',
+                      '#dog',
+                    ].map((tag) => _TagChip(tag: tag)).toList(),
               ),
             ),
             const SizedBox(height: 20),
             // Results or popular packs
             Expanded(
-              child: query.isEmpty
-                  ? _PopularSection()
-                  : _SearchResults(query: query),
+              child:
+                  query.isEmpty
+                      ? _PopularSection()
+                      : _SearchResults(query: query),
             ),
           ],
         ),
@@ -200,7 +202,8 @@ class _TagChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.pastels[tag.hashCode.abs() % AppColors.pastels.length],
+          color:
+              AppColors.pastels[tag.hashCode.abs() % AppColors.pastels.length],
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
@@ -228,35 +231,36 @@ class _PopularSection extends StatelessWidget {
         childAspectRatio: 0.85,
       ),
       itemCount: 10,
-      itemBuilder: (context, index) => GestureDetector(
-        onTap: () => context.push('/pack/$index'),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.pastels[index % AppColors.pastels.length],
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.emoji_emotions_rounded,
-                  size: 40,
-                  color: AppColors.coral.withOpacity(0.4),
+      itemBuilder:
+          (context, index) => GestureDetector(
+            onTap: () => context.push('/pack/$index'),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.pastels[index % AppColors.pastels.length],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.emoji_emotions_rounded,
+                      size: 40,
+                      color: AppColors.coral.withOpacity(0.4),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Popular Pack ${index + 1}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Popular Pack ${index + 1}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 }
@@ -280,9 +284,9 @@ class _SearchResults extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'Searching for "$query"...',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),

@@ -44,8 +44,8 @@ class ProfileScreen extends ConsumerWidget {
               Text(
                 '@stickermaker',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 24),
               // Stats
@@ -154,18 +154,12 @@ class _ProfileStat extends StatelessWidget {
       children: [
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
       ],
     );
@@ -192,40 +186,38 @@ class _SettingsSection extends StatelessWidget {
         ],
       ),
       child: Column(
-        children: items.map((item) {
-          final isLast = item == items.last;
-          return Column(
-            children: [
-              ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: item.color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(item.icon, color: item.color, size: 22),
-                ),
-                title: Text(
-                  item.label,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                trailing: item.trailing ??
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppColors.textSecondary,
+        children:
+            items.map((item) {
+              final isLast = item == items.last;
+              return Column(
+                children: [
+                  ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: item.color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(item.icon, color: item.color, size: 22),
                     ),
-                onTap: () {},
-              ),
-              if (!isLast)
-                Divider(
-                  height: 1,
-                  indent: 72,
-                  color: Colors.grey.shade200,
-                ),
-            ],
-          );
-        }).toList(),
+                    title: Text(
+                      item.label,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    trailing:
+                        item.trailing ??
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.textSecondary,
+                        ),
+                    onTap: () {},
+                  ),
+                  if (!isLast)
+                    Divider(height: 1, indent: 72, color: Colors.grey.shade200),
+                ],
+              );
+            }).toList(),
       ),
     );
   }

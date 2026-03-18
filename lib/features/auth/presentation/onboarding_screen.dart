@@ -18,19 +18,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _OnboardingPage(
       icon: Icons.auto_awesome_rounded,
       title: 'Create Amazing Stickers',
-      description: 'Use AI to generate stickers from text, remove backgrounds with one tap, and add fun effects!',
+      description:
+          'Use AI to generate stickers from text, remove backgrounds with one tap, and add fun effects!',
       color: AppColors.coral,
     ),
     _OnboardingPage(
       icon: Icons.chat_rounded,
       title: 'Share on WhatsApp',
-      description: 'One-click export to WhatsApp & Telegram. Your stickers, ready to send in seconds!',
+      description:
+          'One-click export to WhatsApp & Telegram. Your stickers, ready to send in seconds!',
       color: AppColors.whatsappGreen,
     ),
     _OnboardingPage(
       icon: Icons.people_rounded,
       title: 'Join the Community',
-      description: 'Discover trending stickers, join challenges, and share your creations with the world!',
+      description:
+          'Discover trending stickers, join challenges, and share your creations with the world!',
       color: AppColors.purple,
     ),
   ];
@@ -75,9 +78,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   width: _currentPage == i ? 28 : 10,
                   height: 10,
                   decoration: BoxDecoration(
-                    color: _currentPage == i
-                        ? AppColors.coral
-                        : Colors.grey.shade300,
+                    color:
+                        _currentPage == i
+                            ? AppColors.coral
+                            : Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(5),
                   ),
                 ),
@@ -87,22 +91,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             // Action button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: _currentPage == _pages.length - 1
-                  ? BubblyButton(
-                      label: 'Get Started',
-                      gradient: AppColors.primaryGradient,
-                      onPressed: () => context.go('/home'),
-                    )
-                  : BubblyButton(
-                      label: 'Next',
-                      color: AppColors.coral,
-                      onPressed: () {
-                        _pageController.nextPage(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      },
-                    ),
+              child:
+                  _currentPage == _pages.length - 1
+                      ? BubblyButton(
+                        label: 'Get Started',
+                        gradient: AppColors.primaryGradient,
+                        onPressed: () => context.go('/home'),
+                      )
+                      : BubblyButton(
+                        label: 'Next',
+                        color: AppColors.coral,
+                        onPressed: () {
+                          _pageController.nextPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        },
+                      ),
             ),
             const SizedBox(height: 48),
           ],
@@ -145,18 +150,18 @@ class _OnboardingPage extends StatelessWidget {
           const SizedBox(height: 40),
           Text(
             title,
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  color: color,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.displayLarge?.copyWith(color: color),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
             description,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.6,
-                ),
+              color: AppColors.textSecondary,
+              height: 1.6,
+            ),
             textAlign: TextAlign.center,
           ),
         ],

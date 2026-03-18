@@ -37,18 +37,15 @@ class WhatsAppExportService {
 
     for (int i = 0; i < stickers.length; i++) {
       final s = stickers[i];
-      final maxSize =
-          s.isAnimated ? maxAnimatedSizeBytes : maxStaticSizeBytes;
+      final maxSize = s.isAnimated ? maxAnimatedSizeBytes : maxStaticSizeBytes;
       if (s.data.lengthInBytes > maxSize) {
         errors.add(
-            'Sticker ${i + 1} exceeds max size (${s.data.lengthInBytes ~/ 1024}KB)');
+          'Sticker ${i + 1} exceeds max size (${s.data.lengthInBytes ~/ 1024}KB)',
+        );
       }
     }
 
-    return PackValidationResult(
-      isValid: errors.isEmpty,
-      errors: errors,
-    );
+    return PackValidationResult(isValid: errors.isEmpty, errors: errors);
   }
 
   /// Converts image bytes to WhatsApp-compatible WebP format
@@ -89,10 +86,7 @@ class WhatsAppExportService {
     );
 
     if (!validation.isValid) {
-      return ExportResult(
-        success: false,
-        message: validation.errors.first,
-      );
+      return ExportResult(success: false, message: validation.errors.first);
     }
 
     // In production: platform channel to native WhatsApp SDK

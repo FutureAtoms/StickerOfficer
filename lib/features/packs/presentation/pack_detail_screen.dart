@@ -14,10 +14,7 @@ class PackDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Sticker Pack'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.share_rounded),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.share_rounded), onPressed: () {}),
         ],
       ),
       body: Column(
@@ -114,39 +111,44 @@ class PackDetailScreen extends ConsumerWidget {
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                    ),
-                    itemCount: 12,
-                    itemBuilder: (context, index) => Container(
-                      decoration: BoxDecoration(
-                        color: AppColors
-                            .pastels[index % AppColors.pastels.length],
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.emoji_emotions_rounded,
-                          color: AppColors.coral.withOpacity(0.3),
-                          size: 28,
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
                         ),
-                      ),
-                    ),
+                    itemCount: 12,
+                    itemBuilder:
+                        (context, index) => Container(
+                          decoration: BoxDecoration(
+                            color:
+                                AppColors.pastels[index %
+                                    AppColors.pastels.length],
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Center(
+                            child: Icon(
+                              Icons.emoji_emotions_rounded,
+                              color: AppColors.coral.withOpacity(0.3),
+                              size: 28,
+                            ),
+                          ),
+                        ),
                   ),
                   const SizedBox(height: 16),
                   // Tags
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: ['funny', 'reaction', 'mood', 'meme']
-                        .map((tag) => Chip(
-                              label: Text('#$tag'),
-                              backgroundColor: AppColors.pastels[
-                                  tag.hashCode.abs() %
-                                      AppColors.pastels.length],
-                            ))
-                        .toList(),
+                    children:
+                        ['funny', 'reaction', 'mood', 'meme']
+                            .map(
+                              (tag) => Chip(
+                                label: Text('#$tag'),
+                                backgroundColor:
+                                    AppColors.pastels[tag.hashCode.abs() %
+                                        AppColors.pastels.length],
+                              ),
+                            )
+                            .toList(),
                   ),
                 ],
               ),
@@ -206,7 +208,8 @@ class PackDetailScreen extends ConsumerWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: const Text(
-                                'Converting & adding to WhatsApp...'),
+                              'Converting & adding to WhatsApp...',
+                            ),
                             backgroundColor: AppColors.whatsappGreen,
                             behavior: SnackBarBehavior.floating,
                             shape: RoundedRectangleBorder(
@@ -256,10 +259,7 @@ class _StatItem extends StatelessWidget {
         ),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
         ),
       ],
     );
