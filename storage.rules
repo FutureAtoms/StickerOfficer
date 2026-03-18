@@ -1,0 +1,51 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function maxSize(mb) {
+      return request.resource.size < mb * 1024 * 1024;
+    }
+
+    // User avatars
+    match /users/{userId}/avatar.webp {
+      allow read: if true;
+      allow write: if isOwner(userId) && isImage() && maxSize(2);
+    }
+
+    // Sticker pack assets
+    match /packs/{packId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isImage() && maxSize(1);
+    }
+
+    // AI generated temp storage (auto-cleaned after 24h)
+    match /ai_generated/{userId}/{sessionId}/{fileName} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && isImage() && maxSize(5);
+    }
+
+    // Templates (read-only)
+    match /templates/{templateId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Challenge banners (read-only)
+    match /challenges/{challengeId}/banner.webp {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

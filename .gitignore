@@ -1,0 +1,56 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Android
+android/.gradle/
+android/local.properties
+android/app/debug
+android/app/profile
+android/app/release
+**/android/**/GeneratedPluginRegistrant.java
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Runner/GeneratedPluginRegistrant.*
+**/ios/**/Flutter/Generated.xcconfig
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+
+# Cloud Functions
+functions/lib/
+functions/node_modules/
+
+# IDE
+.vscode/
+*.swp
+*.swo
+*~
+
+# Misc
+.DS_Store
+*.lock
+!pubspec.lock
+coverage/
+*.g.dart
+*.freezed.dart
+
+# Environment
+.env
+.env.*
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
