@@ -193,17 +193,15 @@ class _StickerGrid extends ConsumerWidget {
                 ),
                 child: Stack(
                   children: [
-                    // Sticker thumbnail or placeholder
-                    Center(
+                    // Sticker thumbnail fills the tile
+                    Positioned.fill(
                       child:
                           pack.stickerPaths.isNotEmpty
                               ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(20),
                                 child: Image.file(
                                   File(pack.stickerPaths.first),
-                                  width: 64,
-                                  height: 64,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.contain,
                                   errorBuilder:
                                       (_, __, ___) => Icon(
                                         Icons.emoji_emotions_rounded,
@@ -212,10 +210,12 @@ class _StickerGrid extends ConsumerWidget {
                                       ),
                                 ),
                               )
-                              : Icon(
-                                Icons.emoji_emotions_rounded,
-                                size: 48,
-                                color: AppColors.coral.withOpacity(0.3),
+                              : Center(
+                                child: Icon(
+                                  Icons.emoji_emotions_rounded,
+                                  size: 48,
+                                  color: AppColors.coral.withOpacity(0.3),
+                                ),
                               ),
                     ),
                     // Info overlay
