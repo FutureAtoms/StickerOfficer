@@ -1,49 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../data/providers.dart';
 
 class ChallengesScreen extends ConsumerWidget {
   const ChallengesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final challenges = ref.watch(challengesProvider);
+
+    final activeChallenges =
+        challenges.where((c) => c.isActive || c.isVoting).toList();
+    final pastChallenges = challenges.where((c) => c.isCompleted).toList();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Sticker Challenges')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // Active challenge
-          _ChallengeDetailCard(
-            title: 'Funny Animals',
-            description:
-                'Create the funniest animal stickers! The winner gets featured on the home screen for a week.',
-            daysLeft: 3,
-            submissions: 142,
-            isActive: true,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Past Challenges',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 12),
-          _PastChallengeItem(
-            title: 'Reaction Stickers',
-            winner: '@emoji_master',
-            submissions: 89,
-          ),
-          _PastChallengeItem(
-            title: 'Food & Drinks',
-            winner: '@kawaii_kitchen',
-            submissions: 67,
-          ),
-          _PastChallengeItem(
-            title: 'Holiday Greetings',
-            winner: '@festive_fun',
-            submissions: 112,
-          ),
-        ],
-      ),
+      body:
+          challenges.isEmpty
+              ? Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.emoji_events_rounded,
+                      size: 64,
+                      color: AppColors.textSecondary.withOpacity(0.3),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No challenges available right now',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+              : ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // Active / voting challenges
+                  if (activeChallenges.isNotEmpty) ...[
+                    ...activeChallenges.map((challenge) {
+                      final daysLeft = challenge.endDate
+                          .difference(DateTime.now())
+                          .inDays
+                          .clamp(0, 999);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _ChallengeDetailCard(
+                          title: challenge.title,
+                          description: challenge.description,
+                          daysLeft: daysLeft,
+                          submissions: challenge.submissionCount,
+                          isActive: challenge.isActive,
+                        ),
+                      );
+                    }),
+                  ],
+
+                  // Past challenges
+                  if (pastChallenges.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Past Challenges',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 12),
+                    ...pastChallenges.map(
+                      (challenge) => _PastChallengeItem(
+                        title: challenge.title,
+                        winner: challenge.winnerName ?? 'TBD',
+                        submissions: challenge.submissionCount,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
     );
   }
 }
@@ -113,7 +147,7 @@ class _ChallengeDetailCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
-                  '$daysLeft days left',
+                  isActive ? '$daysLeft days left' : 'Voting',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -155,9 +189,9 @@ class _ChallengeDetailCard extends StatelessWidget {
                     vertical: 12,
                   ),
                 ),
-                child: const Text(
-                  'Submit Pack',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                child: Text(
+                  isActive ? 'Submit Pack' : 'Vote',
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
               ),
             ],
@@ -223,7 +257,7 @@ class _PastChallengeItem extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Winner: $winner · $submissions entries',
+                  'Winner: $winner  --  $submissions entries',
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 12,

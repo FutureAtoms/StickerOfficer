@@ -56,9 +56,8 @@ void main() {
       expect(decoded.height, 96);
     });
 
-    test('STUB: exportToWhatsApp has no platform channel '
-        '- always returns success for valid pack', () async {
-      // Create a real small image for sticker data
+    test('IMPLEMENTED: exportToWhatsApp uses Share.shareXFiles '
+        '(fails gracefully in test env)', () async {
       final tinyImage = img.Image(width: 10, height: 10);
       final tinyBytes = Uint8List.fromList(img.encodePng(tinyImage));
       final stickers = List.generate(
@@ -73,9 +72,9 @@ void main() {
         trayIcon: tinyBytes,
       );
 
-      // Still no platform channel — always returns success when valid
-      expect(result.success, isTrue);
-      expect(result.message, contains('Test Pack'));
+      // Passes validation, but Share.shareXFiles is unavailable in tests
+      expect(result.success, isFalse);
+      expect(result.message, contains('Failed to share'));
     });
   });
 

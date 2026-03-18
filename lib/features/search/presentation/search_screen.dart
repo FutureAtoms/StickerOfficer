@@ -1,9 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
-
-final searchQueryProvider = StateProvider<String>((ref) => '');
+import '../../../data/models/sticker_pack.dart';
+import '../../../data/providers.dart';
 
 class SearchScreen extends ConsumerWidget {
   const SearchScreen({super.key});
@@ -136,8 +138,8 @@ class SearchScreen extends ConsumerWidget {
             Expanded(
               child:
                   query.isEmpty
-                      ? _PopularSection()
-                      : _SearchResults(query: query),
+                      ? const _PopularSection()
+                      : const _SearchResults(),
             ),
           ],
         ),
@@ -219,76 +221,181 @@ class _TagChip extends StatelessWidget {
   }
 }
 
-class _PopularSection extends StatelessWidget {
+class _PopularSection extends ConsumerWidget {
+  const _PopularSection();
+
   @override
-  Widget build(BuildContext context) {
-    return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.85,
-      ),
-      itemCount: 10,
-      itemBuilder:
-          (context, index) => GestureDetector(
-            onTap: () => context.push('/pack/$index'),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.pastels[index % AppColors.pastels.length],
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.emoji_emotions_rounded,
-                      size: 40,
-                      color: AppColors.coral.withOpacity(0.4),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Popular Pack ${index + 1}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final packsAsync = ref.watch(packsProvider);
+
+    return packsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const Center(child: Text('Could not load packs')),
+      data: (packs) {
+        if (packs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.search_off_rounded,
+                  size: 64,
+                  color: AppColors.textSecondary.withOpacity(0.3),
                 ),
-              ),
+                const SizedBox(height: 16),
+                Text(
+                  'No packs yet. Create one to get started!',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
+          );
+        }
+
+        // Sort by likes descending for "popular"
+        final sorted = List<StickerPack>.from(packs)
+          ..sort((a, b) => b.likeCount.compareTo(a.likeCount));
+
+        return GridView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.85,
           ),
+          itemCount: sorted.length,
+          itemBuilder: (context, index) {
+            final pack = sorted[index];
+            return _PackGridItem(pack: pack, index: index);
+          },
+        );
+      },
     );
   }
 }
 
-class _SearchResults extends StatelessWidget {
-  final String query;
+class _SearchResults extends ConsumerWidget {
+  const _SearchResults();
 
-  const _SearchResults({required this.query});
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final resultsAsync = ref.watch(searchResultsProvider);
+
+    return resultsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => const Center(child: Text('Search failed')),
+      data: (results) {
+        if (results.isEmpty) {
+          final query = ref.watch(searchQueryProvider);
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  size: 64,
+                  color: AppColors.textSecondary.withOpacity(0.3),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No results for "$query"',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.85,
+          ),
+          itemCount: results.length,
+          itemBuilder: (context, index) {
+            final pack = results[index];
+            return _PackGridItem(pack: pack, index: index);
+          },
+        );
+      },
+    );
+  }
+}
+
+class _PackGridItem extends StatelessWidget {
+  final StickerPack pack;
+  final int index;
+
+  const _PackGridItem({required this.pack, required this.index});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.search_rounded,
-            size: 64,
-            color: AppColors.textSecondary.withOpacity(0.3),
+    return GestureDetector(
+      onTap: () => context.push('/pack/${pack.id}'),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.pastels[index % AppColors.pastels.length],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (pack.stickerPaths.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    File(pack.stickerPaths.first),
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorBuilder:
+                        (_, __, ___) => Icon(
+                          Icons.emoji_emotions_rounded,
+                          size: 40,
+                          color: AppColors.coral.withOpacity(0.4),
+                        ),
+                  ),
+                )
+              else
+                Icon(
+                  Icons.emoji_emotions_rounded,
+                  size: 40,
+                  color: AppColors.coral.withOpacity(0.4),
+                ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  pack.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${pack.stickerPaths.length} stickers',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Searching for "$query"...',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
-          ),
-        ],
+        ),
       ),
     );
   }

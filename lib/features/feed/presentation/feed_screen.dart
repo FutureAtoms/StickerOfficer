@@ -1,8 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../data/models/sticker_pack.dart';
+import '../../../data/providers.dart';
 
 final feedTabProvider = StateProvider<int>((ref) => 0);
 
@@ -71,7 +75,7 @@ class FeedScreen extends ConsumerWidget {
             Expanded(
               child:
                   selectedTab == 2
-                      ? _ChallengesTab()
+                      ? const _ChallengesTab()
                       : _StickerGrid(isTrending: selectedTab == 0),
             ),
           ],
@@ -117,145 +121,279 @@ class _TabPill extends StatelessWidget {
   }
 }
 
-class _StickerGrid extends StatelessWidget {
+class _StickerGrid extends ConsumerWidget {
   final bool isTrending;
 
   const _StickerGrid({required this.isTrending});
 
   @override
-  Widget build(BuildContext context) {
-    // Sample data - in production, fetched from Firestore
-    final items = List.generate(
-      20,
-      (i) => _PackPreview(
-        name: isTrending ? 'Trending Pack ${i + 1}' : 'Recommended ${i + 1}',
-        stickerCount: (i % 8) + 3,
-        likes: isTrending ? (100 - i * 3) : (50 + i * 2),
-        colorIndex: i % AppColors.pastels.length,
-      ),
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final packsAsync = ref.watch(packsProvider);
 
-    return MasonryGridView.count(
-      crossAxisCount: 2,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        final height = (index % 3 == 0) ? 220.0 : 180.0;
-
-        return GestureDetector(
-          onTap: () => context.push('/pack/${index}'),
-          child: Container(
-            height: height,
-            decoration: BoxDecoration(
-              color: AppColors.pastels[item.colorIndex],
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: const [
-                BoxShadow(
-                  color: AppColors.shadowLight,
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Stack(
+    return packsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error:
+          (error, _) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Placeholder sticker grid
-                Center(
-                  child: Icon(
-                    Icons.emoji_emotions_rounded,
-                    size: 48,
-                    color: AppColors.coral.withOpacity(0.3),
-                  ),
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: 48,
+                  color: AppColors.coral.withOpacity(0.5),
                 ),
-                // Info overlay
-                Positioned(
-                  left: 12,
-                  right: 12,
-                  bottom: 12,
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Text(
-                              '${item.stickerCount} stickers',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                            const Spacer(),
-                            const Icon(
-                              Icons.favorite_rounded,
-                              size: 12,
-                              color: AppColors.coral,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              '${item.likes}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                const SizedBox(height: 12),
+                Text(
+                  'Something went wrong',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
             ),
           ),
+      data: (packs) {
+        if (packs.isEmpty) {
+          return _EmptyFeedState();
+        }
+
+        // Sort: trending = by likeCount desc, for you = by createdAt desc
+        final sorted = List<StickerPack>.from(packs);
+        if (isTrending) {
+          sorted.sort((a, b) => b.likeCount.compareTo(a.likeCount));
+        } else {
+          sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        }
+
+        return MasonryGridView.count(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: sorted.length,
+          itemBuilder: (context, index) {
+            final pack = sorted[index];
+            final colorIndex = index % AppColors.pastels.length;
+            final height = (index % 3 == 0) ? 220.0 : 180.0;
+
+            return GestureDetector(
+              onTap: () => context.push('/pack/${pack.id}'),
+              child: Container(
+                height: height,
+                decoration: BoxDecoration(
+                  color: AppColors.pastels[colorIndex],
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.shadowLight,
+                      blurRadius: 8,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    // Sticker thumbnail or placeholder
+                    Center(
+                      child:
+                          pack.stickerPaths.isNotEmpty
+                              ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.file(
+                                  File(pack.stickerPaths.first),
+                                  width: 64,
+                                  height: 64,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (_, __, ___) => Icon(
+                                        Icons.emoji_emotions_rounded,
+                                        size: 48,
+                                        color: AppColors.coral.withOpacity(0.3),
+                                      ),
+                                ),
+                              )
+                              : Icon(
+                                Icons.emoji_emotions_rounded,
+                                size: 48,
+                                color: AppColors.coral.withOpacity(0.3),
+                              ),
+                    ),
+                    // Info overlay
+                    Positioned(
+                      left: 12,
+                      right: 12,
+                      bottom: 12,
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              pack.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Text(
+                                  '${pack.stickerPaths.length} stickers',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                                const Spacer(),
+                                const Icon(
+                                  Icons.favorite_rounded,
+                                  size: 12,
+                                  color: AppColors.coral,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${pack.likeCount}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
   }
 }
 
-class _ChallengesTab extends StatelessWidget {
+class _EmptyFeedState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.auto_awesome_rounded,
+              size: 72,
+              color: AppColors.purple.withOpacity(0.4),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'No stickers yet!',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Create your first sticker pack and it will show up here.',
+              textAlign: TextAlign.center,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 24),
+            GestureDetector(
+              onTap: () => context.push('/editor'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.coral.withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Text(
+                  'Create Your First Sticker',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChallengesTab extends ConsumerWidget {
+  const _ChallengesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final challenges = ref.watch(challengesProvider);
+
+    if (challenges.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.emoji_events_rounded,
+              size: 64,
+              color: AppColors.textSecondary.withOpacity(0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No challenges yet',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
       padding: const EdgeInsets.all(16),
-      children: [
-        _ChallengeCard(
-          title: 'Funny Animals',
-          description: 'Create the funniest animal stickers!',
-          daysLeft: 3,
-          submissions: 142,
-          color: AppColors.coral,
-          isActive: true,
-        ),
-        const SizedBox(height: 16),
-        _ChallengeCard(
-          title: 'Reaction Stickers',
-          description: 'Express every emotion!',
-          daysLeft: 0,
-          submissions: 89,
-          color: AppColors.purple,
-          isActive: false,
-        ),
-      ],
+      itemCount: challenges.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      itemBuilder: (context, index) {
+        final challenge = challenges[index];
+        final color = challenge.isActive ? AppColors.coral : AppColors.purple;
+        final daysLeft = challenge.endDate.difference(DateTime.now()).inDays;
+
+        return _ChallengeCard(
+          title: challenge.title,
+          description: challenge.description,
+          daysLeft: daysLeft.clamp(0, 999),
+          submissions: challenge.submissionCount,
+          color: color,
+          isActive: challenge.isActive,
+        );
+      },
     );
   }
 }
@@ -379,18 +517,4 @@ class _ChallengeCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _PackPreview {
-  final String name;
-  final int stickerCount;
-  final int likes;
-  final int colorIndex;
-
-  _PackPreview({
-    required this.name,
-    required this.stickerCount,
-    required this.likes,
-    required this.colorIndex,
-  });
 }

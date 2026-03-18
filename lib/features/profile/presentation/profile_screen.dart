@@ -1,12 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../data/providers.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(userStatsProvider);
+
+    // Extract stats values, falling back to zeros while loading
+    final stats = statsAsync.when(
+      data: (s) => s,
+      loading:
+          () => const UserStats(
+            packCount: 0,
+            totalStickers: 0,
+            totalLikes: 0,
+            totalDownloads: 0,
+          ),
+      error:
+          (_, __) => const UserStats(
+            packCount: 0,
+            totalStickers: 0,
+            totalLikes: 0,
+            totalDownloads: 0,
+          ),
+    );
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -52,10 +74,19 @@ class ProfileScreen extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _ProfileStat(value: '12', label: 'Packs'),
-                  _ProfileStat(value: '1.2k', label: 'Followers'),
-                  _ProfileStat(value: '89', label: 'Following'),
-                  _ProfileStat(value: '5.6k', label: 'Likes'),
+                  _ProfileStat(value: '${stats.packCount}', label: 'Packs'),
+                  _ProfileStat(
+                    value: '${stats.totalStickers}',
+                    label: 'Stickers',
+                  ),
+                  _ProfileStat(
+                    value: _formatCount(stats.totalLikes),
+                    label: 'Likes',
+                  ),
+                  _ProfileStat(
+                    value: _formatCount(stats.totalDownloads),
+                    label: 'Downloads',
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -139,6 +170,14 @@ class ProfileScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _formatCount(int count) {
+    if (count >= 1000) {
+      final k = count / 1000;
+      return '${k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1)}k';
+    }
+    return '$count';
   }
 }
 

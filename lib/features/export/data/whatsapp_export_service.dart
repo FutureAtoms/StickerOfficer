@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 /// WhatsApp sticker export service
 ///
@@ -129,9 +132,11 @@ class WhatsAppExportService {
     return canvas;
   }
 
-  /// Exports pack to WhatsApp via platform channel
-  /// Android: registers ContentProvider
-  /// iOS: copies to pasteboard + share sheet
+  /// Exports sticker pack via the system share sheet.
+  ///
+  /// Saves all sticker images as PNG files to a temporary directory, then
+  /// opens the platform share sheet using [Share.shareXFiles]. The user can
+  /// pick WhatsApp (or any other app) from the share sheet.
   Future<ExportResult> exportToWhatsApp({
     required String packName,
     required String packAuthor,
@@ -148,14 +153,49 @@ class WhatsAppExportService {
       return ExportResult(success: false, message: validation.errors.first);
     }
 
-    // In production: platform channel to native WhatsApp SDK
-    // Android: WASticker ContentProvider
-    // iOS: UIPasteboard + share extension
+    try {
+      // Create a temporary directory for the sticker files.
+      final tempDir = await getTemporaryDirectory();
+      final packDir = Directory('${tempDir.path}/sticker_pack_$packName');
+      if (await packDir.exists()) {
+        await packDir.delete(recursive: true);
+      }
+      await packDir.create(recursive: true);
 
-    return ExportResult(
-      success: true,
-      message: 'Pack "$packName" added to WhatsApp!',
-    );
+      final xFiles = <XFile>[];
+
+      // Save each sticker as a PNG file.
+      for (int i = 0; i < stickers.length; i++) {
+        final filePath = '${packDir.path}/sticker_${i + 1}.png';
+        final file = File(filePath);
+        await file.writeAsBytes(stickers[i].data);
+        xFiles.add(XFile(filePath, mimeType: 'image/png'));
+      }
+
+      // Save the tray icon as well.
+      final trayPath = '${packDir.path}/tray_icon.png';
+      final trayFile = File(trayPath);
+      await trayFile.writeAsBytes(trayIcon);
+      xFiles.add(XFile(trayPath, mimeType: 'image/png'));
+
+      // Open the system share sheet so the user can pick WhatsApp or
+      // any other messaging app.
+      await Share.shareXFiles(
+        xFiles,
+        text: 'Sticker Pack: $packName by $packAuthor',
+        subject: packName,
+      );
+
+      return ExportResult(
+        success: true,
+        message: 'Pack "$packName" shared successfully!',
+      );
+    } catch (e) {
+      return ExportResult(
+        success: false,
+        message: 'Failed to share stickers: $e',
+      );
+    }
   }
 }
 
