@@ -1,9 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
+
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bubbly_button.dart';
+import '../../../data/models/sticker_pack.dart';
+import '../../../data/providers.dart';
 import '../../../services/huggingface_provider.dart';
 
 final aiPromptProvider = StateProvider<String>((ref) => '');
@@ -19,6 +26,7 @@ class AiPromptScreen extends ConsumerStatefulWidget {
 class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
   final _controller = TextEditingController();
   bool _hasGenerated = false;
+  bool _isSaving = false;
 
   final _suggestions = [
     'cute cat with sunglasses',
@@ -69,6 +77,205 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
     }
   }
 
+  /// Saves a single Uint8List to disk and returns the file path.
+  Future<String> _saveStickerToDisk(Uint8List bytes) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final stickersDir = Directory('${appDir.path}/stickers');
+    if (!await stickersDir.exists()) {
+      await stickersDir.create(recursive: true);
+    }
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final filePath = '${stickersDir.path}/ai_generated_$timestamp.png';
+    final file = File(filePath);
+    await file.writeAsBytes(bytes);
+    return filePath;
+  }
+
+  /// Saves all generated stickers to disk and returns their file paths.
+  Future<List<String>> _saveAllStickersToDisk() async {
+    final stickers = ref.read(generatedStickersProvider);
+    final paths = <String>[];
+    for (final bytes in stickers) {
+      final path = await _saveStickerToDisk(bytes);
+      paths.add(path);
+    }
+    return paths;
+  }
+
+  /// Navigates to the editor after saving the sticker to disk.
+  Future<void> _editInEditor(Uint8List bytes) async {
+    setState(() => _isSaving = true);
+    try {
+      final filePath = await _saveStickerToDisk(bytes);
+      if (!mounted) return;
+      context.push('/editor', extra: filePath);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save sticker: $e')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  /// Saves a single sticker to a new or existing pack.
+  Future<void> _saveSingleToPack(Uint8List bytes) async {
+    final packName = await _showPackNameDialog();
+    if (packName == null || packName.trim().isEmpty) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final filePath = await _saveStickerToDisk(bytes);
+      const uuid = Uuid();
+      final pack = StickerPack(
+        id: uuid.v4(),
+        name: packName.trim(),
+        authorName: 'Me',
+        stickerPaths: [filePath],
+        trayIconPath: filePath,
+        createdAt: DateTime.now(),
+        tags: ['ai-generated'],
+      );
+      await ref.read(packsProvider.notifier).addPack(pack);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Saved to pack "${pack.name}"')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  /// Saves all generated stickers to a new pack.
+  Future<void> _saveAllToPack() async {
+    final stickers = ref.read(generatedStickersProvider);
+    if (stickers.isEmpty) return;
+
+    final packName = await _showPackNameDialog();
+    if (packName == null || packName.trim().isEmpty) return;
+
+    setState(() => _isSaving = true);
+    try {
+      final paths = await _saveAllStickersToDisk();
+      const uuid = Uuid();
+      final pack = StickerPack(
+        id: uuid.v4(),
+        name: packName.trim(),
+        authorName: 'Me',
+        stickerPaths: paths,
+        trayIconPath: paths.first,
+        createdAt: DateTime.now(),
+        tags: ['ai-generated'],
+      );
+      await ref.read(packsProvider.notifier).addPack(pack);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Saved ${paths.length} stickers to pack "${pack.name}"',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  /// Shows a dialog to enter a pack name.
+  Future<String?> _showPackNameDialog() async {
+    final nameController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text('Name your pack'),
+          content: TextField(
+            controller: nameController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'e.g. Funny Cats',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, nameController.text),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Shows a bottom sheet with options for a tapped sticker.
+  void _showStickerOptions(Uint8List bytes) {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.edit_rounded),
+                  title: const Text('Edit in Editor'),
+                  subtitle: const Text('Open in the sticker editor'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _editInEditor(bytes);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.save_rounded),
+                  title: const Text('Save to Pack'),
+                  subtitle: const Text('Create a new pack with this sticker'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _saveSingleToPack(bytes);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -97,10 +304,7 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
           itemCount: stickers.length,
           itemBuilder: (context, index) {
             return GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                context.push('/editor');
-              },
+              onTap: () => _showStickerOptions(stickers[index]),
               child: Container(
                 decoration: BoxDecoration(
                   color: AppColors.pastels[index % AppColors.pastels.length],
@@ -140,6 +344,20 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
               ),
             );
           },
+        ),
+        const SizedBox(height: 16),
+        // Save All to Pack button
+        SizedBox(
+          width: double.infinity,
+          child:
+              _isSaving
+                  ? const Center(child: CircularProgressIndicator())
+                  : BubblyButton(
+                    label: 'Save All to Pack',
+                    icon: Icons.collections_rounded,
+                    gradient: AppColors.primaryGradient,
+                    onPressed: _saveAllToPack,
+                  ),
         ),
       ],
     );

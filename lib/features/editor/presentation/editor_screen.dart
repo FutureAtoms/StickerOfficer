@@ -8,8 +8,11 @@ import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bubbly_button.dart';
+import '../../../data/models/sticker_pack.dart';
+import '../../../data/providers.dart';
 import 'widgets/editor_canvas.dart';
 import 'widgets/editor_toolbar.dart';
+import 'package:uuid/uuid.dart';
 
 enum EditorTool { none, lasso, brush, eraser, text, transform }
 
@@ -372,6 +375,157 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     }
   }
 
+  Future<void> _showSaveToPackDialog(String stickerPath) async {
+    final packsAsync = ref.read(packsProvider);
+    final existingPacks = packsAsync.valueOrNull ?? [];
+    final nameController = TextEditingController(text: 'My Stickers');
+    StickerPack? selectedExistingPack;
+    bool createNew = existingPacks.isEmpty;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: const Text('Save to Pack'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (existingPacks.isNotEmpty) ...[
+                    Row(
+                      children: [
+                        ChoiceChip(
+                          label: const Text('New Pack'),
+                          selected: createNew,
+                          onSelected: (selected) {
+                            setDialogState(() {
+                              createNew = true;
+                              selectedExistingPack = null;
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        ChoiceChip(
+                          label: const Text('Existing Pack'),
+                          selected: !createNew,
+                          onSelected: (selected) {
+                            setDialogState(() {
+                              createNew = false;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (createNew)
+                    TextField(
+                      controller: nameController,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Pack Name',
+                        hintText: 'Enter pack name...',
+                        border: OutlineInputBorder(),
+                      ),
+                    )
+                  else
+                    DropdownButtonFormField<StickerPack>(
+                      decoration: const InputDecoration(
+                        labelText: 'Select Pack',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: selectedExistingPack,
+                      items:
+                          existingPacks
+                              .map(
+                                (pack) => DropdownMenuItem<StickerPack>(
+                                  value: pack,
+                                  child: Text(
+                                    '${pack.name} (${pack.stickerPaths.length} stickers)',
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: (pack) {
+                        setDialogState(() {
+                          selectedExistingPack = pack;
+                        });
+                      },
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != true || !mounted) return;
+
+    if (createNew) {
+      final packName =
+          nameController.text.trim().isEmpty
+              ? 'My Stickers'
+              : nameController.text.trim();
+      final newPack = StickerPack(
+        id: const Uuid().v4(),
+        name: packName,
+        authorName: 'Me',
+        stickerPaths: [stickerPath],
+        createdAt: DateTime.now(),
+      );
+      await ref.read(packsProvider.notifier).addPack(newPack);
+    } else if (selectedExistingPack != null) {
+      final updatedPack = selectedExistingPack!.copyWith(
+        stickerPaths: [...selectedExistingPack!.stickerPaths, stickerPath],
+      );
+      await ref.read(packsProvider.notifier).updatePack(updatedPack);
+    } else {
+      // No pack selected — do nothing
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No pack selected'),
+            backgroundColor: AppColors.coral,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Sticker saved to pack!'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
   void _saveSticker() {
     showModalBottomSheet(
       context: context,
@@ -395,16 +549,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                     final savedPath = await _captureCanvasToPng();
                     if (!mounted) return;
                     if (savedPath != null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Sticker saved to $savedPath'),
-                          backgroundColor: AppColors.success,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      );
+                      await _showSaveToPackDialog(savedPath);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -429,18 +574,8 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                     final savedPath = await _captureCanvasToPng();
                     if (!mounted) return;
                     if (savedPath != null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text(
-                            'Sticker saved! Opening packs...',
-                          ),
-                          backgroundColor: AppColors.success,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      );
+                      await _showSaveToPackDialog(savedPath);
+                      if (!mounted) return;
                       context.push('/my-packs');
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
