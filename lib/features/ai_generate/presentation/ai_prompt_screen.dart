@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bubbly_button.dart';
+import '../../../services/huggingface_provider.dart';
 
 final aiPromptProvider = StateProvider<String>((ref) => '');
 final aiGeneratingProvider = StateProvider<bool>((ref) => false);
@@ -33,18 +34,115 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
 
     HapticFeedback.mediumImpact();
     ref.read(aiGeneratingProvider.notifier).state = true;
+    ref.read(generatedStickersProvider.notifier).state = [];
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final apiService = ref.read(huggingFaceApiProvider);
+      final images = await apiService.generateSticker(
+        prompt: _controller.text.trim(),
+        apiKey: kHuggingFaceApiKey,
+      );
 
-    ref.read(aiGeneratingProvider.notifier).state = false;
-    setState(() => _hasGenerated = true);
+      if (!mounted) return;
+
+      if (images.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'No images were generated. Please try a different prompt.',
+            ),
+          ),
+        );
+      } else {
+        ref.read(generatedStickersProvider.notifier).state = images;
+        setState(() => _hasGenerated = true);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Generation failed: $e')));
+    } finally {
+      if (mounted) {
+        ref.read(aiGeneratingProvider.notifier).state = false;
+      }
+    }
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  Widget _buildResultsGrid(BuildContext context) {
+    final stickers = ref.watch(generatedStickersProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Pick your favorite:',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 12),
+        GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: stickers.length,
+          itemBuilder: (context, index) {
+            return GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                context.push('/editor');
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.pastels[index % AppColors.pastels.length],
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.transparent, width: 3),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(17),
+                  child: Image.memory(
+                    stickers[index],
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.broken_image_rounded,
+                              size: 40,
+                              color: AppColors.purple.withValues(alpha: 0.4),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Failed to load',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
   }
 
   @override
@@ -168,57 +266,7 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
             ),
             const SizedBox(height: 24),
             // Generated results
-            if (_hasGenerated) ...[
-              Text(
-                'Pick your favorite:',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                children: List.generate(4, (index) {
-                  return GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      context.push('/editor');
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color:
-                            AppColors.pastels[index % AppColors.pastels.length],
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.transparent, width: 3),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.auto_awesome_rounded,
-                              size: 40,
-                              color: AppColors.purple.withOpacity(0.4),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Variation ${index + 1}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ],
+            if (_hasGenerated) _buildResultsGrid(context),
           ],
         ),
       ),

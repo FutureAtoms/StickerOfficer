@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import 'package:image/image.dart' as img;
+
 /// WhatsApp sticker export service
 ///
 /// Handles conversion and export of stickers to WhatsApp format:
@@ -48,26 +50,83 @@ class WhatsAppExportService {
     return PackValidationResult(isValid: errors.isEmpty, errors: errors);
   }
 
-  /// Converts image bytes to WhatsApp-compatible WebP format
-  /// Resizes to 512x512, converts to WebP, compresses until <100KB
+  /// Converts image bytes to WhatsApp-compatible format.
+  ///
+  /// Decodes the source image, resizes to 512x512 (maintaining aspect ratio
+  /// and centering on a transparent background), then encodes to PNG.
+  /// If the result exceeds the size limit, iteratively reduces dimensions
+  /// until it fits within [maxStaticSizeBytes] or [maxAnimatedSizeBytes].
   Future<Uint8List> convertToWhatsAppFormat(
     Uint8List imageBytes, {
     bool isAnimated = false,
   }) async {
-    // In production, this uses the `image` package to:
-    // 1. Decode the source image
-    // 2. Resize to 512x512 (maintain aspect ratio, pad with transparent)
-    // 3. Encode to WebP
-    // 4. Iteratively reduce quality until <100KB (or <500KB for animated)
+    final decoded = img.decodeImage(imageBytes);
+    if (decoded == null) {
+      throw ArgumentError('Unable to decode image');
+    }
 
-    // For now, return the input (actual conversion needs native WebP encoder)
-    return imageBytes;
+    final maxBytes = isAnimated ? maxAnimatedSizeBytes : maxStaticSizeBytes;
+    var targetSize = stickerSize;
+
+    while (targetSize > 0) {
+      final resized = _resizeAndCenter(decoded, targetSize);
+      final encoded = Uint8List.fromList(img.encodePng(resized));
+
+      if (encoded.lengthInBytes <= maxBytes) {
+        return encoded;
+      }
+
+      // Reduce target dimensions by 10% each iteration to shrink file size.
+      targetSize = (targetSize * 0.9).floor();
+    }
+
+    // Fallback: return at smallest possible size.
+    final tiny = _resizeAndCenter(decoded, 1);
+    return Uint8List.fromList(img.encodePng(tiny));
   }
 
-  /// Creates a 96x96 tray icon from the first sticker
+  /// Creates a 96x96 tray icon from the given sticker image bytes.
+  ///
+  /// Decodes the input, resizes to [trayIconSize]x[trayIconSize] while
+  /// maintaining aspect ratio and centering on a transparent background,
+  /// then encodes to PNG.
   Future<Uint8List> generateTrayIcon(Uint8List stickerBytes) async {
-    // Resize to 96x96 WebP
-    return stickerBytes;
+    final decoded = img.decodeImage(stickerBytes);
+    if (decoded == null) {
+      throw ArgumentError('Unable to decode image for tray icon');
+    }
+
+    final resized = _resizeAndCenter(decoded, trayIconSize);
+    return Uint8List.fromList(img.encodePng(resized));
+  }
+
+  /// Resizes [source] so it fits within [size]x[size], maintaining aspect
+  /// ratio, then centers it on a transparent [size]x[size] canvas.
+  static img.Image _resizeAndCenter(img.Image source, int size) {
+    // Determine scale factor to fit within the target square.
+    final scale =
+        size / (source.width > source.height ? source.width : source.height);
+    final newWidth = (source.width * scale).round().clamp(1, size);
+    final newHeight = (source.height * scale).round().clamp(1, size);
+
+    final resized = img.copyResize(
+      source,
+      width: newWidth,
+      height: newHeight,
+      interpolation: img.Interpolation.linear,
+    );
+
+    // Create transparent canvas and composite the resized image at center.
+    final canvas = img.Image(width: size, height: size, numChannels: 4);
+    // Fill with fully transparent pixels.
+    img.fill(canvas, color: img.ColorRgba8(0, 0, 0, 0));
+
+    final offsetX = (size - newWidth) ~/ 2;
+    final offsetY = (size - newHeight) ~/ 2;
+
+    img.compositeImage(canvas, resized, dstX: offsetX, dstY: offsetY);
+
+    return canvas;
   }
 
   /// Exports pack to WhatsApp via platform channel

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:sticker_officer/features/export/data/whatsapp_export_service.dart';
 
 void main() {
@@ -592,91 +593,87 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // 13. Stub documentation — convertToWhatsAppFormat
+  // 13. Image conversion — convertToWhatsAppFormat (IMPLEMENTED)
   // ---------------------------------------------------------------------------
 
-  group('convertToWhatsAppFormat (stub)', () {
-    test('returns input bytes unchanged for static sticker', () async {
-      final input = Uint8List.fromList([10, 20, 30, 40, 50]);
+  group('convertToWhatsAppFormat', () {
+    test('resizes image to 512x512', () async {
+      final testImage = img.Image(width: 100, height: 50);
+      img.fill(testImage, color: img.ColorRgba8(255, 0, 0, 255));
+      final input = Uint8List.fromList(img.encodePng(testImage));
+
       final output = await service.convertToWhatsAppFormat(input);
 
-      expect(output, same(input),
-          reason: 'Stub should return the exact same object reference');
-      expect(output, equals(input));
+      final decoded = img.decodeImage(output);
+      expect(decoded, isNotNull);
+      expect(decoded!.width, 512);
+      expect(decoded.height, 512);
     });
 
-    test('returns input bytes unchanged for animated sticker', () async {
-      final input = Uint8List.fromList([0xFF, 0xAA, 0xBB]);
+    test('processes animated flag without error', () async {
+      final testImage = img.Image(width: 64, height: 64);
+      img.fill(testImage, color: img.ColorRgba8(0, 255, 0, 255));
+      final input = Uint8List.fromList(img.encodePng(testImage));
+
       final output =
           await service.convertToWhatsAppFormat(input, isAnimated: true);
 
-      expect(output, same(input),
-          reason: 'Stub should return the exact same object reference');
+      expect(output, isNotEmpty);
     });
 
-    test('returns empty input unchanged', () async {
-      final input = Uint8List(0);
-      final output = await service.convertToWhatsAppFormat(input);
-
-      expect(output, same(input));
-      expect(output.lengthInBytes, 0);
+    test('throws on invalid image data', () async {
+      final garbage = Uint8List.fromList([10, 20, 30, 40, 50]);
+      expect(
+        () => service.convertToWhatsAppFormat(garbage),
+        throwsA(isA<ArgumentError>()),
+      );
     });
 
-    test('returns large input unchanged', () async {
-      final input = Uint8List(1024 * 1024); // 1MB
+    test('returns different bytes than input (actual processing)', () async {
+      final testImage = img.Image(width: 200, height: 200);
+      img.fill(testImage, color: img.ColorRgba8(0, 0, 255, 255));
+      final input = Uint8List.fromList(img.encodePng(testImage));
+
       final output = await service.convertToWhatsAppFormat(input);
 
-      expect(output, same(input));
-      expect(output.lengthInBytes, 1024 * 1024);
-    });
-
-    test('isAnimated defaults to false', () async {
-      final input = Uint8List.fromList([1, 2, 3]);
-      // Calling without isAnimated should not throw.
-      final output = await service.convertToWhatsAppFormat(input);
-
-      expect(output, same(input));
+      expect(output, isNot(same(input)));
     });
   });
 
   // ---------------------------------------------------------------------------
-  // 14. Stub documentation — generateTrayIcon
+  // 14. Tray icon generation — generateTrayIcon (IMPLEMENTED)
   // ---------------------------------------------------------------------------
 
-  group('generateTrayIcon (stub)', () {
-    test('returns input bytes unchanged', () async {
-      final input = Uint8List.fromList([99, 98, 97]);
+  group('generateTrayIcon', () {
+    test('resizes image to 96x96', () async {
+      final testImage = img.Image(width: 512, height: 512);
+      img.fill(testImage, color: img.ColorRgba8(255, 255, 0, 255));
+      final input = Uint8List.fromList(img.encodePng(testImage));
+
       final output = await service.generateTrayIcon(input);
 
-      expect(output, same(input),
-          reason: 'Stub should return the exact same object reference');
-      expect(output, equals(input));
+      final decoded = img.decodeImage(output);
+      expect(decoded, isNotNull);
+      expect(decoded!.width, 96);
+      expect(decoded.height, 96);
     });
 
-    test('returns empty input unchanged', () async {
-      final input = Uint8List(0);
+    test('returns different bytes than input (actual processing)', () async {
+      final testImage = img.Image(width: 200, height: 200);
+      img.fill(testImage, color: img.ColorRgba8(128, 128, 128, 255));
+      final input = Uint8List.fromList(img.encodePng(testImage));
+
       final output = await service.generateTrayIcon(input);
 
-      expect(output, same(input));
-      expect(output.lengthInBytes, 0);
+      expect(output, isNot(same(input)));
     });
 
-    test('returns large input unchanged', () async {
-      final input = Uint8List(512 * 512); // large image-like buffer
-      final output = await service.generateTrayIcon(input);
-
-      expect(output, same(input));
-      expect(output.lengthInBytes, 512 * 512);
-    });
-
-    test('does not resize or modify data (stub proof)', () async {
-      final input = Uint8List.fromList(List.generate(256, (i) => i));
-      final output = await service.generateTrayIcon(input);
-
-      // Byte-level equality proves no transformation happened.
-      for (int i = 0; i < input.length; i++) {
-        expect(output[i], input[i], reason: 'Byte $i should be unchanged');
-      }
+    test('throws on invalid image data', () async {
+      final garbage = Uint8List.fromList([99, 98, 97]);
+      expect(
+        () => service.generateTrayIcon(garbage),
+        throwsA(isA<ArgumentError>()),
+      );
     });
   });
 
