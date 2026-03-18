@@ -90,4 +90,6 @@ flutter:
     - assets/images/
     - assets/lottie/
     - assets/fonts/
+    - assets/seed_stickers/
+    - assets/test_assets/
   # Fonts loaded via google_fonts package at runtime
