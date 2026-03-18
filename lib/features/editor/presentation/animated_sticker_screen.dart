@@ -11,21 +11,25 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/sticker_guardrails.dart';
 import '../../../core/widgets/bubbly_button.dart';
 import '../../../data/models/sticker_pack.dart';
 import '../../../data/providers.dart';
 
 /// Maximum number of frames allowed (WhatsApp animated sticker limit).
-const _kMaxFrames = 8;
+const _kMaxFrames = StickerGuardrails.maxFrames;
 
 /// Sticker canvas size in pixels.
-const _kStickerSize = 512;
+const _kStickerSize = StickerGuardrails.stickerSize;
 
 /// WhatsApp max file size for animated stickers in bytes (500 KB).
-const _kMaxFileSize = 500 * 1024;
+const _kMaxFileSize = StickerGuardrails.maxAnimatedSizeBytes;
 
 class AnimatedStickerScreen extends ConsumerStatefulWidget {
-  const AnimatedStickerScreen({super.key});
+  /// Optional list of file paths to pre-load as frames (e.g. from video extraction).
+  final List<String>? initialFramePaths;
+
+  const AnimatedStickerScreen({super.key, this.initialFramePaths});
 
   @override
   ConsumerState<AnimatedStickerScreen> createState() =>
@@ -60,9 +64,42 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
   /// Whether an export is currently in progress.
   bool _isExporting = false;
 
+  // -- Text overlay state ---------------------------------------------------
+  String? _overlayText;
+  Color _textColor = Colors.white;
+  double _textSize = 28.0;
+  bool _textBold = true;
+  TextAnimation _textAnimation = TextAnimation.none;
+
   // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialFrames();
+  }
+
+  /// Loads frames passed from the video-to-sticker screen (or any other source).
+  Future<void> _loadInitialFrames() async {
+    final paths = widget.initialFramePaths;
+    if (paths == null || paths.isEmpty) return;
+
+    for (final path in paths) {
+      final file = File(path);
+      if (await file.exists()) {
+        final bytes = await file.readAsBytes();
+        if (mounted) {
+          setState(() {
+            _framePaths.add(path);
+            _frameBytes.add(bytes);
+          });
+        }
+      }
+    }
+    _updateSizeEstimate();
+  }
 
   @override
   void dispose() {
@@ -76,7 +113,10 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
 
   Future<void> _addFrames() async {
     if (_framePaths.length >= _kMaxFrames) {
-      _showSnackBar('Maximum $_kMaxFrames frames reached!', AppColors.coral);
+      _showSnackBar(
+        'You already have $_kMaxFrames frames — that\'s the max!',
+        AppColors.coral,
+      );
       return;
     }
 
@@ -103,14 +143,80 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
 
       if (images.length > remaining) {
         _showSnackBar(
-          'Only $remaining more frame(s) allowed — extras were skipped.',
+          'Only added $remaining — $_kMaxFrames is the max!',
           AppColors.coral,
         );
       }
 
       _updateSizeEstimate();
     } catch (e) {
-      _showSnackBar('Failed to pick images: $e', AppColors.coral);
+      _showSnackBar('Couldn\'t pick images — try again!', AppColors.coral);
+    }
+  }
+
+  /// Import frames from an existing GIF file.
+  Future<void> _importGif() async {
+    if (_framePaths.length >= _kMaxFrames) {
+      _showSnackBar(
+        'You already have $_kMaxFrames frames — remove some first!',
+        AppColors.coral,
+      );
+      return;
+    }
+
+    try {
+      final xfile = await _picker.pickMedia();
+      if (xfile == null) return;
+
+      final bytes = await xfile.readAsBytes();
+      final decoded = img.decodeGif(bytes);
+      if (decoded == null) {
+        _showSnackBar(
+          'Couldn\'t read that file — pick a GIF!',
+          AppColors.coral,
+        );
+        return;
+      }
+
+      final remaining = _kMaxFrames - _framePaths.length;
+      final totalFrames = decoded.numFrames;
+      final framesToTake = totalFrames.clamp(0, remaining);
+
+      if (framesToTake == 0) {
+        _showSnackBar('No room for more frames!', AppColors.coral);
+        return;
+      }
+
+      // Save each frame as a PNG to a temp dir
+      final tempDir = await getTemporaryDirectory();
+      int added = 0;
+
+      for (int i = 0; i < framesToTake; i++) {
+        final frame = decoded.getFrame(i);
+        final pngBytes = Uint8List.fromList(img.encodePng(frame));
+        final path =
+            '${tempDir.path}/gif_frame_${DateTime.now().millisecondsSinceEpoch}_$i.png';
+        await File(path).writeAsBytes(pngBytes);
+
+        setState(() {
+          _framePaths.add(path);
+          _frameBytes.add(pngBytes);
+        });
+        added++;
+      }
+
+      if (totalFrames > framesToTake) {
+        _showSnackBar(
+          'Added $added of $totalFrames frames (hit the $_kMaxFrames limit)',
+          Colors.orange,
+        );
+      } else {
+        _showSnackBar('Added $added frames from GIF!', AppColors.success);
+      }
+
+      _updateSizeEstimate();
+    } catch (e) {
+      _showSnackBar('GIF import failed — try a different file!', AppColors.coral);
     }
   }
 
@@ -141,8 +247,11 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
   // ---------------------------------------------------------------------------
 
   void _togglePlay() {
-    if (_framePaths.length < 2) {
-      _showSnackBar('Add at least 2 frames to preview!', AppColors.coral);
+    if (_framePaths.length < StickerGuardrails.minFrames) {
+      _showSnackBar(
+        'Add at least ${StickerGuardrails.minFrames} pictures to see it move!',
+        AppColors.coral,
+      );
       return;
     }
     HapticFeedback.lightImpact();
@@ -178,24 +287,11 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
       setState(() => _estimatedSize = 0);
       return;
     }
-    // Rough heuristic: sum of compressed frame sizes * 0.6 (GIF overhead is
-    // typically less than raw JPEG but includes palette and framing).
+    // Rough heuristic: sum of compressed frame sizes * 0.6
     final rawSum = _frameBytes.fold<int>(0, (s, b) => s + b.length);
     setState(() {
       _estimatedSize = (rawSum * 0.6).round();
     });
-  }
-
-  Color _sizeColor() {
-    if (_estimatedSize < 300 * 1024) return AppColors.success;
-    if (_estimatedSize < 450 * 1024) return Colors.orange;
-    return AppColors.coral;
-  }
-
-  String _sizeLabel() {
-    final kb = _estimatedSize / 1024;
-    if (kb < 1) return '0 KB';
-    return '${kb.toStringAsFixed(0)} KB';
   }
 
   // ---------------------------------------------------------------------------
@@ -204,13 +300,15 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
 
   int get _fps => (1000 / _frameDurationMs).round();
 
-  /// Convert FPS to frame duration. Clamped between 4 and 8 fps.
+  /// Convert FPS to frame duration. Clamped between minFps and maxFps.
   void _setFps(double fps) {
-    final clamped = fps.clamp(4.0, 8.0);
+    final clamped = fps.clamp(
+      StickerGuardrails.minFps.toDouble(),
+      StickerGuardrails.maxFps.toDouble(),
+    );
     setState(() {
       _frameDurationMs = (1000 / clamped).round();
     });
-    // Restart timer if playing
     if (_isPlaying) {
       _stopAnimation();
       _startAnimation();
@@ -218,12 +316,409 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
   }
 
   // ---------------------------------------------------------------------------
+  // Text overlay
+  // ---------------------------------------------------------------------------
+
+  void _showAddTextDialog() {
+    final controller = TextEditingController(text: _overlayText ?? '');
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text('Add Text to Your Sticker!'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                autofocus: true,
+                maxLength: StickerGuardrails.maxTextLength,
+                decoration: const InputDecoration(
+                  hintText: 'Type something fun...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Keep it friendly and fun!',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            if (_overlayText != null)
+              TextButton(
+                onPressed: () {
+                  setState(() => _overlayText = null);
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Remove'),
+              ),
+            FilledButton(
+              onPressed: () {
+                final text = StickerGuardrails.sanitizeText(controller.text);
+                Navigator.pop(ctx);
+                if (text.isNotEmpty) {
+                  if (!StickerGuardrails.isKidSafeText(text)) {
+                    _showSnackBar(
+                      'Oops! Please use friendly words only.',
+                      AppColors.coral,
+                    );
+                    return;
+                  }
+                  _showTextStyleSheet(text);
+                }
+              },
+              child: const Text('Next'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showTextStyleSheet(String text) {
+    const colorOptions = <MapEntry<String, Color>>[
+      MapEntry('White', Colors.white),
+      MapEntry('Black', Colors.black),
+      MapEntry('Red', Colors.red),
+      MapEntry('Blue', Colors.blue),
+      MapEntry('Green', Colors.green),
+      MapEntry('Yellow', Colors.yellow),
+      MapEntry('Pink', Colors.pink),
+      MapEntry('Purple', Colors.purple),
+    ];
+
+    Color pickedColor = _textColor;
+    double pickedSize = _textSize;
+    bool pickedBold = _textBold;
+    TextAnimation pickedAnim = _textAnimation;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                20,
+                24,
+                MediaQuery.of(ctx).viewInsets.bottom + 32,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handle
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Style Your Text!',
+                      style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.purple,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Preview
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Center(
+                        child: Text(
+                          text,
+                          style: TextStyle(
+                            color: pickedColor,
+                            fontSize: pickedSize.clamp(16, 40),
+                            fontWeight:
+                                pickedBold ? FontWeight.w700 : FontWeight.w400,
+                            shadows: const [
+                              Shadow(
+                                color: Colors.black54,
+                                blurRadius: 4,
+                                offset: Offset(1, 1),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Color picker
+                    const Text(
+                      'Pick a Color',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: colorOptions.map((entry) {
+                        final isSelected =
+                            pickedColor.toARGB32() == entry.value.toARGB32();
+                        return GestureDetector(
+                          onTap: () {
+                            setSheetState(() => pickedColor = entry.value);
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: entry.value,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.coral
+                                    : Colors.grey.shade400,
+                                width: isSelected ? 3 : 1.5,
+                              ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: AppColors.coral
+                                            .withValues(alpha: 0.4),
+                                        blurRadius: 8,
+                                        spreadRadius: 1,
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                    // Size slider
+                    Row(
+                      children: [
+                        const Text(
+                          'Size',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${pickedSize.round()}px',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Slider(
+                      value: pickedSize,
+                      min: StickerGuardrails.minTextSize,
+                      max: StickerGuardrails.maxTextSize,
+                      divisions: 48,
+                      activeColor: AppColors.coral,
+                      label: '${pickedSize.round()}px',
+                      onChanged: (val) {
+                        setSheetState(() => pickedSize = val);
+                      },
+                    ),
+                    // Bold toggle
+                    Row(
+                      children: [
+                        const Text(
+                          'Bold',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () {
+                            setSheetState(() => pickedBold = !pickedBold);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: pickedBold
+                                  ? AppColors.purple.withValues(alpha: 0.15)
+                                  : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: pickedBold
+                                    ? AppColors.purple
+                                    : Colors.grey.shade300,
+                                width: 2,
+                              ),
+                            ),
+                            child: Text(
+                              pickedBold ? 'B  ON' : 'B  OFF',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: pickedBold
+                                    ? AppColors.purple
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // Animation type picker
+                    const Text(
+                      'Animation',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: TextAnimation.values.map((anim) {
+                        final isSelected = pickedAnim == anim;
+                        return GestureDetector(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setSheetState(() => pickedAnim = anim);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: isSelected
+                                  ? AppColors.primaryGradient
+                                  : null,
+                              color: isSelected ? null : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected
+                                    ? AppColors.coral
+                                    : Colors.grey.shade300,
+                                width: isSelected ? 2 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  anim.icon,
+                                  size: 16,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : AppColors.textSecondary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  anim.label,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 24),
+                    // Apply button
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.coral,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _overlayText = text;
+                            _textColor = pickedColor;
+                            _textSize = pickedSize;
+                            _textBold = pickedBold;
+                            _textAnimation = pickedAnim;
+                          });
+                          Navigator.pop(ctx);
+                          _showSnackBar(
+                            'Text added! ${pickedAnim != TextAnimation.none ? "Animation: ${pickedAnim.label}" : ""}',
+                            AppColors.success,
+                          );
+                        },
+                        child: const Text(
+                          'Add to Sticker!',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Export
   // ---------------------------------------------------------------------------
 
   Future<void> _export() async {
-    if (_frameBytes.length < 2) {
-      _showSnackBar('Add at least 2 frames to export!', AppColors.coral);
+    // Validate with guardrails
+    final errors = StickerGuardrails.validateAnimatedSticker(
+      frameCount: _frameBytes.length,
+      estimatedSizeBytes: _estimatedSize,
+      fps: _fps,
+      overlayText: _overlayText,
+    );
+
+    if (errors.isNotEmpty) {
+      _showSnackBar(errors.first, AppColors.coral);
       return;
     }
 
@@ -243,17 +738,30 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
           height: _kStickerSize,
           interpolation: img.Interpolation.linear,
         );
+
+        // Burn text into each frame if overlay text is set
+        if (_overlayText != null && _overlayText!.isNotEmpty) {
+          img.drawString(
+            decoded,
+            _overlayText!,
+            font: img.arial24,
+            x: _kStickerSize ~/ 4,
+            y: _kStickerSize - 80,
+            color: img.ColorRgba8(255, 255, 255, 230),
+          );
+        }
+
         // Set frame duration (in centiseconds for GIF)
         decoded.frameDuration = (_frameDurationMs / 10).round();
         frames.add(decoded);
       }
 
       if (frames.isEmpty) {
-        _showSnackBar('Could not decode frames.', AppColors.coral);
+        _showSnackBar('Couldn\'t read your pictures — try different ones!', AppColors.coral);
         return;
       }
 
-      // Build animation: first frame is the base, rest are addFrame'd.
+      // Build animation
       final animation = frames.first.clone();
       for (var i = 1; i < frames.length; i++) {
         animation.addFrame(frames[i]);
@@ -277,22 +785,22 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
       final actualSize = gifBytes.length;
       if (actualSize > _kMaxFileSize) {
         _showSnackBar(
-          'Exported (${(actualSize / 1024).toStringAsFixed(0)} KB) — '
-          'may exceed WhatsApp 500 KB limit!',
+          'Saved but it\'s ${StickerGuardrails.sizeLabel(actualSize)} — '
+          'WhatsApp might not accept it!',
           Colors.orange,
         );
       }
 
       await _showSaveToPackDialog(filePath);
     } catch (e) {
-      _showSnackBar('Export failed: $e', AppColors.coral);
+      _showSnackBar('Something went wrong — try again!', AppColors.coral);
     } finally {
       if (mounted) setState(() => _isExporting = false);
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Save to pack dialog (mirrors EditorScreen pattern)
+  // Save to pack dialog
   // ---------------------------------------------------------------------------
 
   Future<void> _showSaveToPackDialog(String stickerPath) async {
@@ -349,7 +857,7 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                       autofocus: true,
                       decoration: const InputDecoration(
                         labelText: 'Pack Name',
-                        hintText: 'Enter pack name...',
+                        hintText: 'Give your pack a cool name!',
                         border: OutlineInputBorder(),
                       ),
                     )
@@ -360,17 +868,16 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                         border: OutlineInputBorder(),
                       ),
                       value: selectedExistingPack,
-                      items:
-                          existingPacks
-                              .map(
-                                (pack) => DropdownMenuItem<StickerPack>(
-                                  value: pack,
-                                  child: Text(
-                                    '${pack.name} (${pack.stickerPaths.length} stickers)',
-                                  ),
-                                ),
-                              )
-                              .toList(),
+                      items: existingPacks
+                          .map(
+                            (pack) => DropdownMenuItem<StickerPack>(
+                              value: pack,
+                              child: Text(
+                                '${pack.name} (${pack.stickerPaths.length} stickers)',
+                              ),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (pack) {
                         setDialogState(() {
                           selectedExistingPack = pack;
@@ -398,10 +905,9 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
     if (result != true || !mounted) return;
 
     if (createNew) {
-      final packName =
-          nameController.text.trim().isEmpty
-              ? 'My Animated Stickers'
-              : nameController.text.trim();
+      final packName = nameController.text.trim().isEmpty
+          ? 'My Animated Stickers'
+          : nameController.text.trim();
       final newPack = StickerPack(
         id: const Uuid().v4(),
         name: packName,
@@ -416,12 +922,12 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
       );
       await ref.read(packsProvider.notifier).updatePack(updatedPack);
     } else {
-      _showSnackBar('No pack selected', AppColors.coral);
+      _showSnackBar('Pick a pack first!', AppColors.coral);
       return;
     }
 
     if (mounted) {
-      _showSnackBar('Animated sticker saved to pack!', AppColors.success);
+      _showSnackBar('Animated sticker saved!', AppColors.success);
     }
   }
 
@@ -457,6 +963,19 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
         ),
         title: const Text('Animated Sticker'),
         centerTitle: true,
+        actions: [
+          // Text overlay button
+          IconButton(
+            icon: Icon(
+              _overlayText != null
+                  ? Icons.text_fields_rounded
+                  : Icons.text_fields_outlined,
+              color: _overlayText != null ? AppColors.coral : null,
+            ),
+            tooltip: 'Add Text',
+            onPressed: _showAddTextDialog,
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -470,21 +989,45 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                 // -- Preview area ---------------------------------------------
                 Expanded(child: _buildPreview(theme)),
 
+                // -- Text overlay indicator -----------------------------------
+                if (_overlayText != null) _buildTextOverlayBadge(theme),
+
                 // -- Controls -------------------------------------------------
                 _buildControls(theme),
 
-                // -- Save button ----------------------------------------------
+                // -- Duration indicator ----------------------------------------
+                if (_framePaths.length >= StickerGuardrails.minFrames)
+                  _buildDurationIndicator(theme),
+
+                // -- Import & Save buttons ------------------------------------
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
-                    vertical: 12,
+                    vertical: 8,
                   ),
-                  child: BubblyButton(
-                    label: 'Save to Pack',
-                    icon: Icons.save_rounded,
-                    color: AppColors.purple,
-                    isLoading: _isExporting,
-                    onPressed: _export,
+                  child: Row(
+                    children: [
+                      // GIF import button
+                      Expanded(
+                        child: BubblyButton(
+                          label: 'Import GIF',
+                          icon: Icons.gif_box_rounded,
+                          color: AppColors.teal,
+                          onPressed: _importGif,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Save button
+                      Expanded(
+                        child: BubblyButton(
+                          label: 'Save to Pack',
+                          icon: Icons.save_rounded,
+                          color: AppColors.purple,
+                          isLoading: _isExporting,
+                          onPressed: _export,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -507,7 +1050,7 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                     children: [
                       CircularProgressIndicator(color: AppColors.purple),
                       SizedBox(height: 16),
-                      Text('Creating animated sticker...'),
+                      Text('Creating your animated sticker...'),
                     ],
                   ),
                 ),
@@ -532,19 +1075,17 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color:
-                  _framePaths.length >= _kMaxFrames
-                      ? AppColors.coral.withOpacity(0.15)
-                      : AppColors.purple.withOpacity(0.15),
+              color: _framePaths.length >= _kMaxFrames
+                  ? AppColors.coral.withOpacity(0.15)
+                  : AppColors.purple.withOpacity(0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               '${_framePaths.length}/$_kMaxFrames',
               style: theme.textTheme.labelLarge?.copyWith(
-                color:
-                    _framePaths.length >= _kMaxFrames
-                        ? AppColors.coral
-                        : AppColors.purple,
+                color: _framePaths.length >= _kMaxFrames
+                    ? AppColors.coral
+                    : AppColors.purple,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -565,7 +1106,6 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                 );
               },
               onReorder: (oldIndex, newIndex) {
-                // Ignore the add-button position
                 if (oldIndex >= _framePaths.length ||
                     newIndex > _framePaths.length) {
                   return;
@@ -573,7 +1113,6 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                 _onReorder(oldIndex, newIndex);
               },
               itemBuilder: (context, index) {
-                // Last item is the "add" button
                 if (index == _framePaths.length) {
                   return _buildAddButton(key: const ValueKey('add-btn'));
                 }
@@ -596,10 +1135,9 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
         height: 70,
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color:
-              canAdd
-                  ? AppColors.purple.withOpacity(0.12)
-                  : Colors.grey.withOpacity(0.1),
+          color: canAdd
+              ? AppColors.purple.withOpacity(0.12)
+              : Colors.grey.withOpacity(0.1),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: canAdd ? AppColors.purple : Colors.grey.shade300,
@@ -634,15 +1172,14 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
             color: isSelected ? AppColors.coral : Colors.transparent,
             width: 3,
           ),
-          boxShadow:
-              isSelected
-                  ? [
-                    BoxShadow(
-                      color: AppColors.coral.withOpacity(0.3),
-                      blurRadius: 8,
-                    ),
-                  ]
-                  : null,
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.coral.withOpacity(0.3),
+                    blurRadius: 8,
+                  ),
+                ]
+              : null,
         ),
         child: Stack(
           children: [
@@ -660,7 +1197,8 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
               left: 4,
               bottom: 4,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(6),
@@ -682,8 +1220,8 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
               child: GestureDetector(
                 onTap: () => _removeFrame(index),
                 child: Container(
-                  width: 20,
-                  height: 20,
+                  width: 22,
+                  height: 22,
                   decoration: const BoxDecoration(
                     color: AppColors.coral,
                     shape: BoxShape.circle,
@@ -732,7 +1270,7 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Tap to add frames!',
+                  'Tap to add pictures!',
                   style: theme.textTheme.titleLarge?.copyWith(
                     color: AppColors.purple,
                   ),
@@ -742,6 +1280,14 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                   'Up to $_kMaxFrames images',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'or import a GIF below!',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ],
@@ -769,34 +1315,134 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                 ),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: Image.file(
-                File(_framePaths[_currentFrame]),
-                width: 260,
-                height: 260,
-                fit: BoxFit.cover,
-                gaplessPlayback: true,
-              ),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Image.file(
+                    File(_framePaths[_currentFrame]),
+                    width: 260,
+                    height: 260,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                  ),
+                ),
+                // Text overlay preview
+                if (_overlayText != null && _overlayText!.isNotEmpty)
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    right: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _overlayText!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: _textColor,
+                          fontSize: (_textSize * 0.6).clamp(12.0, 28.0),
+                          fontWeight:
+                              _textBold ? FontWeight.w700 : FontWeight.w400,
+                          shadows: const [
+                            Shadow(
+                              color: Colors.black54,
+                              blurRadius: 4,
+                              offset: Offset(1, 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
 
           // Play / pause
           IconButton(
-            onPressed: _framePaths.length >= 2 ? _togglePlay : null,
+            onPressed:
+                _framePaths.length >= StickerGuardrails.minFrames
+                    ? _togglePlay
+                    : null,
             icon: Icon(
               _isPlaying
                   ? Icons.pause_circle_filled_rounded
                   : Icons.play_circle_filled_rounded,
               size: 52,
-              color:
-                  _framePaths.length >= 2
-                      ? AppColors.coral
-                      : Colors.grey.shade400,
+              color: _framePaths.length >= StickerGuardrails.minFrames
+                  ? AppColors.coral
+                  : Colors.grey.shade400,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Text overlay badge
+  // ---------------------------------------------------------------------------
+
+  Widget _buildTextOverlayBadge(ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.purple.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.purple.withOpacity(0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.text_fields, size: 18, color: AppColors.purple),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '"$_overlayText"',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.purple,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (_textAnimation != TextAnimation.none) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.coral.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _textAnimation.label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.coral,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => setState(() => _overlayText = null),
+              child: const Icon(Icons.close, size: 18, color: AppColors.coral),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -853,9 +1499,9 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                   ),
                   child: Slider(
                     value: _fps.toDouble(),
-                    min: 4,
-                    max: 8,
-                    divisions: 4,
+                    min: StickerGuardrails.minFps.toDouble(),
+                    max: StickerGuardrails.maxFps.toDouble(),
+                    divisions: StickerGuardrails.maxFps - StickerGuardrails.minFps,
                     onChanged: (v) => _setFps(v),
                   ),
                 ),
@@ -879,7 +1525,11 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
   }
 
   Widget _buildSizeBar(ThemeData theme) {
-    final sizeColor = _sizeColor();
+    final status = StickerGuardrails.sizeStatus(
+      _estimatedSize,
+      isAnimated: true,
+    );
+    final sizeColor = StickerGuardrails.sizeColor(status);
     final fraction = (_estimatedSize / _kMaxFileSize).clamp(0.0, 1.0);
 
     return Column(
@@ -889,29 +1539,28 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
             Icon(Icons.data_usage_rounded, color: sizeColor, size: 18),
             const SizedBox(width: 6),
             Text(
-              'Size: ${_sizeLabel()} / 500 KB',
+              'Size: ${StickerGuardrails.sizeLabel(_estimatedSize)} / 500 KB',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: sizeColor,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const Spacer(),
-            if (_estimatedSize > 450 * 1024)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.coral.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Too large!',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.coral,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10,
-                  ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: sizeColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                StickerGuardrails.sizeTip(status, isAnimated: true),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: sizeColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
                 ),
               ),
+            ),
           ],
         ),
         const SizedBox(height: 6),
@@ -926,6 +1575,59 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
         ),
         const SizedBox(height: 8),
       ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Duration indicator
+  // ---------------------------------------------------------------------------
+
+  Widget _buildDurationIndicator(ThemeData theme) {
+    final durationMs = StickerGuardrails.totalDurationMs(
+      _framePaths.length,
+      _fps,
+    );
+    final durationLabel = StickerGuardrails.durationLabel(
+      _framePaths.length,
+      _fps,
+    );
+    final isSafe = StickerGuardrails.isDurationSafe(
+      _framePaths.length,
+      _fps,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            Icons.timer_outlined,
+            size: 18,
+            color: isSafe ? AppColors.textSecondary : AppColors.coral,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Duration: $durationLabel',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: isSafe ? AppColors.textSecondary : AppColors.coral,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (!isSafe) ...[
+            const SizedBox(width: 8),
+            Text(
+              durationMs < StickerGuardrails.minDurationMs
+                  ? 'Too short!'
+                  : 'Too long!',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: AppColors.coral,
+                fontWeight: FontWeight.bold,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

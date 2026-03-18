@@ -4,6 +4,7 @@ import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/editor/presentation/editor_screen.dart';
 import '../../features/editor/presentation/animated_sticker_screen.dart';
+import '../../features/editor/presentation/video_to_sticker_screen.dart';
 import '../../features/packs/presentation/my_packs_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/packs/presentation/pack_detail_screen.dart';
@@ -71,7 +72,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/animated-editor',
-        builder: (context, state) => const AnimatedStickerScreen(),
+        builder: (context, state) {
+          final initialFrames = state.extra as List<String>?;
+          return AnimatedStickerScreen(initialFramePaths: initialFrames);
+        },
+      ),
+      GoRoute(
+        path: '/video-to-sticker',
+        builder: (context, state) => const VideoToStickerScreen(),
       ),
       GoRoute(
         path: '/challenges',
