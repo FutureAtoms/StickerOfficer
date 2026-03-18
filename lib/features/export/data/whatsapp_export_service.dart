@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 /// WhatsApp sticker export service

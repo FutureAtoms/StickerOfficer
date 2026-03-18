@@ -64,7 +64,7 @@ class _BubblyButtonState extends State<BubblyButton>
       },
       onTapCancel: () => _controller.reverse(),
       child: AnimatedBuilder(
-        animation: _scale,
+        listenable: _scale,
         builder: (context, child) => Transform.scale(
           scale: _scale.value,
           child: child,
