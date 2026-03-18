@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 /// Hugging Face Inference API client for text-to-sticker generation
 class HuggingFaceApiService {
   // In production, this key comes from Cloud Function proxy
-  static const _baseUrl = 'https://api-inference.huggingface.co';
+  static const _baseUrl = 'https://router.huggingface.co/hf-inference';
   static const _defaultModel = 'stabilityai/stable-diffusion-xl-base-1.0';
 
   final Dio _dio;
@@ -16,7 +16,7 @@ class HuggingFaceApiService {
             BaseOptions(
               baseUrl: _baseUrl,
               connectTimeout: const Duration(seconds: 30),
-              receiveTimeout: const Duration(seconds: 60),
+              receiveTimeout: const Duration(seconds: 120),
             ),
           );
 
