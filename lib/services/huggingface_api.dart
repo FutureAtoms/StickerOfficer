@@ -62,7 +62,8 @@ class HuggingFaceApiService {
 
   /// Build optimized prompt for sticker-style output
   String _buildStickerPrompt(String userPrompt) {
-    return 'sticker style, die-cut sticker, white outline border, cartoon, '
+    return 'safe for children, family friendly, '
+        'sticker style, die-cut sticker, white outline border, cartoon, '
         'kawaii, cute, simple background, high quality, $userPrompt';
   }
 }

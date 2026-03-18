@@ -9,6 +9,9 @@ class EditorCanvas extends StatelessWidget {
   final List<Offset> currentStroke;
   final String? overlayText;
   final Offset textPosition;
+  final Color textColor;
+  final double textSize;
+  final bool textBold;
   final bool hasRemovedBg;
   final EditorTool selectedTool;
   final ValueChanged<Offset> onStrokeStart;
@@ -22,6 +25,9 @@ class EditorCanvas extends StatelessWidget {
     required this.currentStroke,
     this.overlayText,
     required this.textPosition,
+    this.textColor = Colors.white,
+    this.textSize = 28,
+    this.textBold = true,
     required this.hasRemovedBg,
     required this.selectedTool,
     required this.onStrokeStart,
@@ -57,6 +63,9 @@ class EditorCanvas extends StatelessWidget {
               currentStroke: currentStroke,
               overlayText: overlayText,
               textPosition: textPosition,
+              textColor: textColor,
+              textSize: textSize,
+              textBold: textBold,
               hasRemovedBg: hasRemovedBg,
               selectedTool: selectedTool,
             ),
@@ -74,6 +83,9 @@ class _CanvasPainter extends CustomPainter {
   final List<Offset> currentStroke;
   final String? overlayText;
   final Offset textPosition;
+  final Color textColor;
+  final double textSize;
+  final bool textBold;
   final bool hasRemovedBg;
   final EditorTool selectedTool;
 
@@ -83,6 +95,9 @@ class _CanvasPainter extends CustomPainter {
     required this.currentStroke,
     this.overlayText,
     required this.textPosition,
+    this.textColor = Colors.white,
+    this.textSize = 28,
+    this.textBold = true,
     required this.hasRemovedBg,
     required this.selectedTool,
   });
@@ -133,11 +148,11 @@ class _CanvasPainter extends CustomPainter {
       final textPainter = TextPainter(
         text: TextSpan(
           text: overlayText,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            shadows: [
+          style: TextStyle(
+            color: textColor,
+            fontSize: textSize,
+            fontWeight: textBold ? FontWeight.w700 : FontWeight.w400,
+            shadows: const [
               Shadow(
                 color: Colors.black54,
                 blurRadius: 4,

@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bubbly_button.dart';
@@ -39,6 +40,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
   String? _overlayText;
   Offset _textPosition = const Offset(100, 100);
   bool _hasRemovedbg = false;
+
+  // Text styling state
+  Color _textColor = Colors.white;
+  double _textSize = 28.0;
+  bool _textBold = true;
 
   @override
   void initState() {
@@ -178,6 +184,117 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     }
   }
 
+  Future<void> _cropImage() async {
+    if (_loadedImage == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('No image loaded to crop'),
+            backgroundColor: AppColors.coral,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      // Save current canvas to a temp file for cropping
+      final boundary =
+          _canvasKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
+      if (boundary == null) return;
+
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+
+      final pngBytes = byteData.buffer.asUint8List();
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File(
+        '${tempDir.path}/crop_temp_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await tempFile.writeAsBytes(pngBytes);
+
+      // Launch image cropper
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: tempFile.path,
+        compressFormat: ImageCompressFormat.png,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Sticker',
+            toolbarColor: AppColors.coral,
+            toolbarWidgetColor: Colors.white,
+            activeControlsWidgetColor: AppColors.coral,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: false,
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.original,
+            ],
+          ),
+          IOSUiSettings(
+            title: 'Crop Sticker',
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square,
+              CropAspectRatioPreset.original,
+            ],
+          ),
+        ],
+      );
+
+      // Clean up temp file
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+
+      if (croppedFile == null) return;
+
+      // Reload the cropped image into the canvas
+      final croppedBytes = await File(croppedFile.path).readAsBytes();
+      final codec = await ui.instantiateImageCodec(croppedBytes);
+      final frameInfo = await codec.getNextFrame();
+
+      if (mounted) {
+        setState(() {
+          _loadedImage = frameInfo.image;
+          // Clear strokes and text since the canvas has been replaced
+          _strokes.clear();
+          _overlayText = null;
+        });
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Image cropped!'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Cropping failed: $e'),
+            backgroundColor: AppColors.coral,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   /// Simple flood-fill background removal from corners.
   /// Marks pixels as transparent if they are similar in color to the corner
   /// pixels, spreading inward using a queue-based flood fill.
@@ -265,12 +382,261 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
             ),
             TextButton(
               onPressed: () {
-                setState(() => _overlayText = controller.text);
+                final text = controller.text;
                 Navigator.pop(ctx);
+                if (text.isNotEmpty) {
+                  _showTextStyleSheet(text);
+                }
               },
               child: const Text('Add'),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  void _showTextStyleSheet(String text) {
+    const colorOptions = <MapEntry<String, Color>>[
+      MapEntry('White', Colors.white),
+      MapEntry('Black', Colors.black),
+      MapEntry('Red', Colors.red),
+      MapEntry('Blue', Colors.blue),
+      MapEntry('Green', Colors.green),
+      MapEntry('Yellow', Colors.yellow),
+      MapEntry('Pink', Colors.pink),
+      MapEntry('Purple', Colors.purple),
+    ];
+
+    Color pickedColor = _textColor;
+    double pickedSize = _textSize;
+    bool pickedBold = _textBold;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Style Your Text!',
+                    style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.purple,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Preview
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Center(
+                      child: Text(
+                        text,
+                        style: TextStyle(
+                          color: pickedColor,
+                          fontSize: pickedSize.clamp(16, 40),
+                          fontWeight:
+                              pickedBold ? FontWeight.w700 : FontWeight.w400,
+                          shadows: const [
+                            Shadow(
+                              color: Colors.black54,
+                              blurRadius: 4,
+                              offset: Offset(1, 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Color picker label
+                  const Text(
+                    'Pick a Color',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  ),
+                  const SizedBox(height: 10),
+                  // Color circles
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children:
+                        colorOptions.map((entry) {
+                          final isSelected =
+                              pickedColor.toARGB32() == entry.value.toARGB32();
+                          return GestureDetector(
+                            onTap: () {
+                              setSheetState(() => pickedColor = entry.value);
+                            },
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: entry.value,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color:
+                                      isSelected
+                                          ? AppColors.coral
+                                          : Colors.grey.shade400,
+                                  width: isSelected ? 3 : 1.5,
+                                ),
+                                boxShadow:
+                                    isSelected
+                                        ? [
+                                          BoxShadow(
+                                            color: AppColors.coral.withValues(
+                                              alpha: 0.4,
+                                            ),
+                                            blurRadius: 8,
+                                            spreadRadius: 1,
+                                          ),
+                                        ]
+                                        : null,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  // Size slider
+                  Row(
+                    children: [
+                      const Text(
+                        'Size',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${pickedSize.round()}px',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: pickedSize,
+                    min: 16,
+                    max: 64,
+                    divisions: 48,
+                    activeColor: AppColors.coral,
+                    label: '${pickedSize.round()}px',
+                    onChanged: (val) {
+                      setSheetState(() => pickedSize = val);
+                    },
+                  ),
+                  // Bold toggle
+                  Row(
+                    children: [
+                      const Text(
+                        'Bold',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: () {
+                          setSheetState(() => pickedBold = !pickedBold);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                pickedBold
+                                    ? AppColors.purple.withValues(alpha: 0.15)
+                                    : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color:
+                                  pickedBold
+                                      ? AppColors.purple
+                                      : Colors.grey.shade300,
+                              width: 2,
+                            ),
+                          ),
+                          child: Text(
+                            pickedBold ? 'B  ON' : 'B  OFF',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color:
+                                  pickedBold
+                                      ? AppColors.purple
+                                      : AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Apply button
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.coral,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _overlayText = text;
+                          _textColor = pickedColor;
+                          _textSize = pickedSize;
+                          _textBold = pickedBold;
+                        });
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text(
+                        'Add to Sticker!',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -619,6 +985,11 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                     : null,
           ),
           IconButton(
+            icon: const Icon(Icons.crop_rounded),
+            tooltip: 'Crop Sticker',
+            onPressed: _cropImage,
+          ),
+          IconButton(
             icon: const Icon(Icons.check_rounded),
             onPressed: _saveSticker,
           ),
@@ -638,6 +1009,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                     currentStroke: _currentStroke,
                     overlayText: _overlayText,
                     textPosition: _textPosition,
+                    textColor: _textColor,
+                    textSize: _textSize,
+                    textBold: _textBold,
                     hasRemovedBg: _hasRemovedbg,
                     selectedTool: selectedTool,
                     onStrokeStart: (offset) {

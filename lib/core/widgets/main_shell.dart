@@ -68,6 +68,16 @@ class MainShell extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _CreateOption(
+                  icon: Icons.animation_rounded,
+                  label: 'Animated Sticker',
+                  color: Colors.deepOrange,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push('/animated-editor');
+                  },
+                ),
+                const SizedBox(height: 12),
+                _CreateOption(
                   icon: Icons.dashboard_customize_rounded,
                   label: 'From Template',
                   color: AppColors.teal,

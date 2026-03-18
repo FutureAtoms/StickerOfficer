@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/editor/presentation/editor_screen.dart';
+import '../../features/editor/presentation/animated_sticker_screen.dart';
 import '../../features/packs/presentation/my_packs_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/packs/presentation/pack_detail_screen.dart';
@@ -67,6 +68,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final packId = state.pathParameters['id']!;
           return PackDetailScreen(packId: packId);
         },
+      ),
+      GoRoute(
+        path: '/animated-editor',
+        builder: (context, state) => const AnimatedStickerScreen(),
       ),
       GoRoute(
         path: '/challenges',
