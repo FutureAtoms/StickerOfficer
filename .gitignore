@@ -44,6 +44,7 @@ functions/node_modules/
 .DS_Store
 *.lock
 !pubspec.lock
+!functions/package-lock.json
 coverage/
 *.g.dart
 *.freezed.dart

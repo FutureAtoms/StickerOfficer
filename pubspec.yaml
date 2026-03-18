@@ -29,8 +29,7 @@ dependencies:
   firebase_crashlytics: ^4.0.0
   firebase_remote_config: ^5.0.0
 
-  # AI/ML (on-device)
-  onnxruntime_flutter: ^1.0.0
+  # Image processing
   image: ^4.2.0
 
   # AI (cloud)
@@ -91,13 +90,4 @@ flutter:
     - assets/images/
     - assets/lottie/
     - assets/fonts/
-  fonts:
-    - family: Nunito
-      fonts:
-        - asset: assets/fonts/Nunito-Regular.ttf
-        - asset: assets/fonts/Nunito-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Nunito-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Nunito-Bold.ttf
-          weight: 700
+  # Fonts loaded via google_fonts package at runtime
