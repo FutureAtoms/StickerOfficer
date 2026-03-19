@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/whatsapp_button.dart';
 import '../../../data/models/sticker_pack.dart';
@@ -83,6 +84,12 @@ class _PackDetailBody extends StatelessWidget {
       appBar: AppBar(
         title: Text(pack.name),
         actions: [
+          if (stickerCount < 30)
+            IconButton(
+              icon: const Icon(Icons.add_photo_alternate_rounded),
+              tooltip: 'Add Sticker',
+              onPressed: () => context.push('/editor'),
+            ),
           IconButton(icon: const Icon(Icons.share_rounded), onPressed: () {}),
         ],
       ),
@@ -187,9 +194,20 @@ class _PackDetailBody extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   // Sticker grid
-                  Text(
-                    'Stickers ($stickerCount)',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  Row(
+                    children: [
+                      Text(
+                        'Stickers ($stickerCount/30)',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const Spacer(),
+                      if (stickerCount < 30)
+                        TextButton.icon(
+                          onPressed: () => context.push('/editor'),
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Add'),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   if (stickerCount == 0)

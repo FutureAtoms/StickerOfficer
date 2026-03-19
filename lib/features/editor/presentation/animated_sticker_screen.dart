@@ -917,6 +917,14 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
       );
       await ref.read(packsProvider.notifier).addPack(newPack);
     } else if (selectedExistingPack != null) {
+      if (selectedExistingPack!.stickerPaths.length >=
+          StickerGuardrails.maxStickersPerPack) {
+        _showSnackBar(
+          'This pack already has ${StickerGuardrails.maxStickersPerPack} stickers — that\'s the max!',
+          AppColors.coral,
+        );
+        return;
+      }
       final updatedPack = selectedExistingPack!.copyWith(
         stickerPaths: [...selectedExistingPack!.stickerPaths, stickerPath],
       );
@@ -927,8 +935,55 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
     }
 
     if (mounted) {
-      _showSnackBar('Animated sticker saved!', AppColors.success);
+      _showAddAnotherDialog();
     }
+  }
+
+  /// After saving, offer to create another animated sticker for the same pack.
+  void _showAddAnotherDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text('Sticker Saved!'),
+          content: const Text(
+            'Want to create another animated sticker?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                if (mounted) context.pop();
+              },
+              child: const Text('Done'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.coral,
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                // Reset for a new sticker
+                _stopAnimation();
+                setState(() {
+                  _framePaths.clear();
+                  _frameBytes.clear();
+                  _currentFrame = 0;
+                  _isPlaying = false;
+                  _estimatedSize = 0;
+                  _overlayText = null;
+                  _textAnimation = TextAnimation.none;
+                });
+              },
+              child: const Text('Create Another!'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // ---------------------------------------------------------------------------

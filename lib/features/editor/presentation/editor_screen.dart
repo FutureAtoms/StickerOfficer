@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/sticker_guardrails.dart';
 import '../../../core/widgets/bubbly_button.dart';
 import '../../../data/models/sticker_pack.dart';
 import '../../../data/providers.dart';
@@ -414,6 +415,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -421,7 +423,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             return Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+              padding: EdgeInsets.fromLTRB(
+                24, 20, 24, MediaQuery.of(ctx).viewInsets.bottom + 32,
+              ),
+              child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -634,6 +639,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                     ),
                   ),
                 ],
+              ),
               ),
             );
           },
@@ -857,6 +863,24 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       );
       await ref.read(packsProvider.notifier).addPack(newPack);
     } else if (selectedExistingPack != null) {
+      if (selectedExistingPack!.stickerPaths.length >=
+          StickerGuardrails.maxStickersPerPack) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'This pack already has ${StickerGuardrails.maxStickersPerPack} stickers — that\'s the max!',
+              ),
+              backgroundColor: AppColors.coral,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
+        return;
+      }
       final updatedPack = selectedExistingPack!.copyWith(
         stickerPaths: [...selectedExistingPack!.stickerPaths, stickerPath],
       );
@@ -879,17 +903,56 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Sticker saved to pack!'),
-          backgroundColor: AppColors.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+      _showAddAnotherDialog();
     }
+  }
+
+  /// After saving a sticker, offer to create another one for the same pack.
+  void _showAddAnotherDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text('Sticker Saved!'),
+          content: const Text(
+            'Want to create another sticker for this pack?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                if (mounted) context.pop(); // Go back to home
+              },
+              child: const Text('Done'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.coral,
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                // Reset canvas for a new sticker
+                setState(() {
+                  _loadedImage = null;
+                  _strokes.clear();
+                  _currentStroke = [];
+                  _overlayText = null;
+                  _textPosition = const Offset(100, 100);
+                  _hasRemovedbg = false;
+                  _textColor = Colors.white;
+                  _textSize = 28.0;
+                  _textBold = true;
+                });
+              },
+              child: const Text('Create Another!'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _saveSticker() {
