@@ -83,6 +83,35 @@ class PacksNotifier extends AsyncNotifier<List<StickerPack>> {
     });
   }
 
+  /// Toggles the like status for a pack, updating the like count (+1 / -1)
+  /// and persisting both the liked-packs set and the updated pack.
+  Future<void> toggleLike(String packId) async {
+    final likedNotifier = ref.read(likedPacksProvider.notifier);
+    final isCurrentlyLiked = likedNotifier.isLiked(packId);
+
+    // Toggle the liked-packs set
+    if (isCurrentlyLiked) {
+      likedNotifier.remove(packId);
+    } else {
+      likedNotifier.add(packId);
+    }
+
+    // Update the pack's likeCount
+    state = await AsyncValue.guard(() async {
+      final packs = _repo.getPacks();
+      final index = packs.indexWhere((p) => p.id == packId);
+      if (index < 0) return packs;
+
+      final pack = packs[index];
+      final newCount = isCurrentlyLiked
+          ? (pack.likeCount - 1).clamp(0, 999999)
+          : pack.likeCount + 1;
+      final updated = pack.copyWith(likeCount: newCount);
+      await _repo.updatePack(updated);
+      return _repo.getPacks();
+    });
+  }
+
   /// Forces a reload from SharedPreferences.
   Future<void> refresh() async {
     state = const AsyncLoading();
@@ -104,52 +133,52 @@ class PacksNotifier extends AsyncNotifier<List<StickerPack>> {
     final appDir = await getApplicationDocumentsDirectory();
     final now = DateTime.now();
 
-    // Seed pack definitions: name, asset prefix, sticker count, metadata
+    // Seed pack definitions: 5 meme packs x 30 stickers = 150 total
     final demoPacks = <_SeedPack>[
       _SeedPack(
-        name: 'Cute Animals',
-        assetPrefix: 'cute_animals',
-        count: 3,
-        tags: ['cute', 'animals'],
-        authorName: 'StickerOfficer',
-        likeCount: 87,
-        downloadCount: 214,
-      ),
-      _SeedPack(
-        name: 'Funny Reactions',
-        assetPrefix: 'funny_reactions',
-        count: 5,
-        tags: ['funny', 'reaction', 'meme'],
+        name: 'Brainrot Memes',
+        assetPrefix: 'brainrot_memes',
+        count: 30,
+        tags: ['brainrot', 'slang', 'viral', 'meme', 'gen-z'],
         authorName: 'MemeKing',
-        likeCount: 312,
-        downloadCount: 578,
+        likeCount: 1247,
+        downloadCount: 3891,
       ),
       _SeedPack(
-        name: 'Food & Drinks',
-        assetPrefix: 'food_drinks',
-        count: 4,
-        tags: ['food', 'drinks'],
-        authorName: 'FoodieArt',
-        likeCount: 156,
-        downloadCount: 340,
+        name: 'Reaction Memes',
+        assetPrefix: 'reaction_memes',
+        count: 30,
+        tags: ['reaction', 'mood', 'funny', 'relatable'],
+        authorName: 'ReactionLab',
+        likeCount: 982,
+        downloadCount: 2756,
       ),
       _SeedPack(
-        name: 'Emoji Remix',
-        assetPrefix: 'emoji_remix',
-        count: 3,
-        tags: ['emoji', 'remix'],
-        authorName: 'EmojiLab',
-        likeCount: 243,
-        downloadCount: 491,
+        name: 'AI & Tech Memes',
+        assetPrefix: 'ai_tech_memes',
+        count: 30,
+        tags: ['ai', 'tech', 'coding', 'developer', 'chatgpt'],
+        authorName: 'DevHumor',
+        likeCount: 1543,
+        downloadCount: 4102,
       ),
       _SeedPack(
-        name: 'Motivational',
-        assetPrefix: 'motivational',
-        count: 3,
-        tags: ['motivation', 'quotes'],
-        authorName: 'InspireDaily',
-        likeCount: 198,
-        downloadCount: 425,
+        name: 'Wholesome Vibes',
+        assetPrefix: 'wholesome_memes',
+        count: 30,
+        tags: ['wholesome', 'love', 'positive', 'vibes', 'cute'],
+        authorName: 'GoodVibesOnly',
+        likeCount: 2103,
+        downloadCount: 5234,
+      ),
+      _SeedPack(
+        name: 'Daily Life',
+        assetPrefix: 'daily_life_memes',
+        count: 30,
+        tags: ['daily', 'relatable', 'mood', 'life', 'funny'],
+        authorName: 'DailyMood',
+        likeCount: 876,
+        downloadCount: 2198,
       ),
     ];
 
@@ -220,6 +249,45 @@ class _SeedPack {
     this.likeCount = 0,
     this.downloadCount = 0,
   });
+}
+
+// =============================================================================
+// Liked packs – persisted Set<String> in SharedPreferences
+// =============================================================================
+
+const _likedPacksKey = 'liked_packs';
+
+final likedPacksProvider =
+    StateNotifierProvider<LikedPacksNotifier, Set<String>>(
+  (ref) {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return LikedPacksNotifier(prefs);
+  },
+);
+
+class LikedPacksNotifier extends StateNotifier<Set<String>> {
+  final SharedPreferences _prefs;
+
+  LikedPacksNotifier(this._prefs)
+      : super(
+          (_prefs.getStringList(_likedPacksKey) ?? []).toSet(),
+        );
+
+  bool isLiked(String packId) => state.contains(packId);
+
+  void _persist() {
+    _prefs.setStringList(_likedPacksKey, state.toList());
+  }
+
+  void add(String packId) {
+    state = {...state, packId};
+    _persist();
+  }
+
+  void remove(String packId) {
+    state = {...state}..remove(packId);
+    _persist();
+  }
 }
 
 // =============================================================================
