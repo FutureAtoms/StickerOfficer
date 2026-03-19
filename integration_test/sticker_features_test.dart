@@ -190,7 +190,9 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.check_rounded));
-      await tester.pumpAndSettle();
+      // Use pump instead of pumpAndSettle — bottom sheet animation can
+      // cause pumpAndSettle to time out on some simulators.
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Save Sticker'), findsOneWidget);
       expect(find.text('Save to Pack'), findsOneWidget);
@@ -327,13 +329,13 @@ void main() {
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
 
-      // Select Bounce
+      // Select Bounce — use pump to avoid animation settle timeout
       await tester.tap(find.text('Bounce'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // Apply
       await tester.tap(find.text('Add to Sticker!'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       // Badge shows text and animation name
       expect(find.text('"Fun!"'), findsOneWidget);
@@ -355,7 +357,7 @@ void main() {
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Add to Sticker!'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('"Remove me"'), findsOneWidget);
 
@@ -475,7 +477,9 @@ void main() {
 
       // Tap save button
       await tester.tap(find.byIcon(Icons.check_rounded));
-      await tester.pumpAndSettle();
+      // Use pump instead of pumpAndSettle — bottom sheet animation can
+      // cause pumpAndSettle to time out.
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Save Sticker'), findsOneWidget);
       expect(find.text('Save to Pack'), findsOneWidget);
