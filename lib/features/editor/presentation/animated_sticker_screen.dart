@@ -13,6 +13,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/sticker_guardrails.dart';
 import '../../../core/widgets/bubbly_button.dart';
+import '../../../core/widgets/text_style_sheet.dart';
 import '../../../data/models/sticker_pack.dart';
 import '../../../data/providers.dart';
 
@@ -29,7 +30,19 @@ class AnimatedStickerScreen extends ConsumerStatefulWidget {
   /// Optional list of file paths to pre-load as frames (e.g. from video extraction).
   final List<String>? initialFramePaths;
 
-  const AnimatedStickerScreen({super.key, this.initialFramePaths});
+  /// Path to an FFmpeg-generated GIF (video-to-sticker flow). If set, this GIF
+  /// is used directly on export when the user makes no edits.
+  final String? ffmpegGifPath;
+
+  /// Initial FPS from video conversion (video-to-sticker flow).
+  final int? initialFps;
+
+  const AnimatedStickerScreen({
+    super.key,
+    this.initialFramePaths,
+    this.ffmpegGifPath,
+    this.initialFps,
+  });
 
   @override
   ConsumerState<AnimatedStickerScreen> createState() =>
@@ -66,10 +79,13 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
 
   // -- Text overlay state ---------------------------------------------------
   String? _overlayText;
-  Color _textColor = Colors.white;
-  double _textSize = 28.0;
-  bool _textBold = true;
+  StickerTextStyle _textStyle = const StickerTextStyle();
   TextAnimation _textAnimation = TextAnimation.none;
+
+  // -- Video-sourced state ---------------------------------------------------
+  String? _ffmpegGifPath;
+  bool _isVideoSourced = false;
+  bool _hasBeenEdited = false;
 
   // ---------------------------------------------------------------------------
   // Lifecycle
@@ -98,6 +114,21 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
         }
       }
     }
+
+    // Video-sourced sticker setup
+    if (widget.ffmpegGifPath != null) {
+      _ffmpegGifPath = widget.ffmpegGifPath;
+      _isVideoSourced = true;
+
+      if (widget.initialFps != null) {
+        final fps = widget.initialFps!.clamp(
+          StickerGuardrails.minFps,
+          StickerGuardrails.videoMaxFps,
+        );
+        _frameDurationMs = (1000 / fps).round();
+      }
+    }
+
     _updateSizeEstimate();
   }
 
@@ -125,11 +156,10 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
     try {
       final images = await _picker.pickMultiImage(
         imageQuality: 85,
-        maxWidth: _kStickerSize.toDouble(),
-        maxHeight: _kStickerSize.toDouble(),
       );
 
       if (images.isEmpty) return;
+      _hasBeenEdited = true;
 
       final toAdd = images.take(remaining).toList();
 
@@ -221,6 +251,7 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
   }
 
   void _removeFrame(int index) {
+    _hasBeenEdited = true;
     HapticFeedback.lightImpact();
     setState(() {
       _framePaths.removeAt(index);
@@ -233,6 +264,7 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
   }
 
   void _onReorder(int oldIndex, int newIndex) {
+    _hasBeenEdited = true;
     setState(() {
       if (newIndex > oldIndex) newIndex -= 1;
       final path = _framePaths.removeAt(oldIndex);
@@ -300,11 +332,14 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
 
   int get _fps => (1000 / _frameDurationMs).round();
 
-  /// Convert FPS to frame duration. Clamped between minFps and maxFps.
+  /// Convert FPS to frame duration. Clamped between min and max FPS.
   void _setFps(double fps) {
+    final maxFps = _isVideoSourced
+        ? StickerGuardrails.videoMaxFps
+        : StickerGuardrails.maxFps;
     final clamped = fps.clamp(
       StickerGuardrails.minFps.toDouble(),
-      StickerGuardrails.maxFps.toDouble(),
+      maxFps.toDouble(),
     );
     setState(() {
       _frameDurationMs = (1000 / clamped).round();
@@ -342,7 +377,7 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
+              const Text(
                 'Keep it friendly and fun!',
                 style: TextStyle(
                   fontSize: 12,
@@ -388,22 +423,6 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
   }
 
   void _showTextStyleSheet(String text) {
-    const colorOptions = <MapEntry<String, Color>>[
-      MapEntry('White', Colors.white),
-      MapEntry('Black', Colors.black),
-      MapEntry('Red', Colors.red),
-      MapEntry('Blue', Colors.blue),
-      MapEntry('Green', Colors.green),
-      MapEntry('Yellow', Colors.yellow),
-      MapEntry('Pink', Colors.pink),
-      MapEntry('Purple', Colors.purple),
-    ];
-
-    Color pickedColor = _textColor;
-    double pickedSize = _textSize;
-    bool pickedBold = _textBold;
-    TextAnimation pickedAnim = _textAnimation;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -411,292 +430,28 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                24,
-                20,
-                24,
-                MediaQuery.of(ctx).viewInsets.bottom + 32,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Handle
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Style Your Text!',
-                      style: Theme.of(ctx).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.purple,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // Preview
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Center(
-                        child: Text(
-                          text,
-                          style: TextStyle(
-                            color: pickedColor,
-                            fontSize: pickedSize.clamp(16, 40),
-                            fontWeight:
-                                pickedBold ? FontWeight.w700 : FontWeight.w400,
-                            shadows: const [
-                              Shadow(
-                                color: Colors.black54,
-                                blurRadius: 4,
-                                offset: Offset(1, 1),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    // Color picker
-                    const Text(
-                      'Pick a Color',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: colorOptions.map((entry) {
-                        final isSelected =
-                            pickedColor.toARGB32() == entry.value.toARGB32();
-                        return GestureDetector(
-                          onTap: () {
-                            setSheetState(() => pickedColor = entry.value);
-                          },
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: entry.value,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.coral
-                                    : Colors.grey.shade400,
-                                width: isSelected ? 3 : 1.5,
-                              ),
-                              boxShadow: isSelected
-                                  ? [
-                                      BoxShadow(
-                                        color: AppColors.coral
-                                            .withValues(alpha: 0.4),
-                                        blurRadius: 8,
-                                        spreadRadius: 1,
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 20),
-                    // Size slider
-                    Row(
-                      children: [
-                        const Text(
-                          'Size',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${pickedSize.round()}px',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Slider(
-                      value: pickedSize,
-                      min: StickerGuardrails.minTextSize,
-                      max: StickerGuardrails.maxTextSize,
-                      divisions: 48,
-                      activeColor: AppColors.coral,
-                      label: '${pickedSize.round()}px',
-                      onChanged: (val) {
-                        setSheetState(() => pickedSize = val);
-                      },
-                    ),
-                    // Bold toggle
-                    Row(
-                      children: [
-                        const Text(
-                          'Bold',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        GestureDetector(
-                          onTap: () {
-                            setSheetState(() => pickedBold = !pickedBold);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: pickedBold
-                                  ? AppColors.purple.withValues(alpha: 0.15)
-                                  : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: pickedBold
-                                    ? AppColors.purple
-                                    : Colors.grey.shade300,
-                                width: 2,
-                              ),
-                            ),
-                            child: Text(
-                              pickedBold ? 'B  ON' : 'B  OFF',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: pickedBold
-                                    ? AppColors.purple
-                                    : AppColors.textSecondary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    // Animation type picker
-                    const Text(
-                      'Animation',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: TextAnimation.values.map((anim) {
-                        final isSelected = pickedAnim == anim;
-                        return GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            setSheetState(() => pickedAnim = anim);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: isSelected
-                                  ? AppColors.primaryGradient
-                                  : null,
-                              color: isSelected ? null : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.coral
-                                    : Colors.grey.shade300,
-                                width: isSelected ? 2 : 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  anim.icon,
-                                  size: 16,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : AppColors.textSecondary,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  anim.label,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : AppColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 24),
-                    // Apply button
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.coral,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _overlayText = text;
-                            _textColor = pickedColor;
-                            _textSize = pickedSize;
-                            _textBold = pickedBold;
-                            _textAnimation = pickedAnim;
-                          });
-                          Navigator.pop(ctx);
-                          _showSnackBar(
-                            'Text added! ${pickedAnim != TextAnimation.none ? "Animation: ${pickedAnim.label}" : ""}',
-                            AppColors.success,
-                          );
-                        },
-                        child: const Text(
-                          'Add to Sticker!',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+        return TextStyleBottomSheet(
+          text: text,
+          initialStyle: _textStyle,
+          showAnimationPicker: true,
+          initialAnimation: _textAnimation,
+          onApply: (style) {
+            _hasBeenEdited = true;
+            setState(() {
+              _overlayText = text;
+              _textStyle = style;
+            });
+          },
+          onApplyWithAnimation: (style, anim) {
+            _hasBeenEdited = true;
+            setState(() {
+              _overlayText = text;
+              _textStyle = style;
+              _textAnimation = anim;
+            });
+            _showSnackBar(
+              'Text added! ${anim != TextAnimation.none ? "Animation: ${anim.label}" : ""}',
+              AppColors.success,
             );
           },
         );
@@ -709,13 +464,20 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
   // ---------------------------------------------------------------------------
 
   Future<void> _export() async {
-    // Validate with guardrails
-    final errors = StickerGuardrails.validateAnimatedSticker(
-      frameCount: _frameBytes.length,
-      estimatedSizeBytes: _estimatedSize,
-      fps: _fps,
-      overlayText: _overlayText,
-    );
+    // Use video-specific or standard validation
+    final errors = _isVideoSourced
+        ? StickerGuardrails.validateVideoSticker(
+            frameCount: _frameBytes.length,
+            fps: _fps,
+            sizeBytes: _estimatedSize,
+            text: _overlayText,
+          )
+        : StickerGuardrails.validateAnimatedSticker(
+            frameCount: _frameBytes.length,
+            estimatedSizeBytes: _estimatedSize,
+            fps: _fps,
+            overlayText: _overlayText,
+          );
 
     if (errors.isNotEmpty) {
       _showSnackBar(errors.first, AppColors.coral);
@@ -725,10 +487,39 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
     setState(() => _isExporting = true);
     HapticFeedback.mediumImpact();
 
+    // Fast path: use FFmpeg GIF directly if no edits were made
+    if (_isVideoSourced && !_hasBeenEdited && _ffmpegGifPath != null) {
+      try {
+        final gifFile = File(_ffmpegGifPath!);
+        if (await gifFile.exists()) {
+          final directory = await getApplicationDocumentsDirectory();
+          final stickersDir = Directory('${directory.path}/stickers');
+          if (!await stickersDir.exists()) {
+            await stickersDir.create(recursive: true);
+          }
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final filePath = '${stickersDir.path}/animated_$timestamp.gif';
+          await gifFile.copy(filePath);
+
+          if (!mounted) return;
+          setState(() => _isExporting = false);
+          await _showSaveToPackDialog(filePath);
+          return;
+        }
+      } catch (_) {
+        // Fall through to standard export
+      }
+    }
+
     try {
+      // Compress frames to fit WhatsApp's 500KB animated sticker limit
+      final compressedFrames = await StickerGuardrails.compressAnimatedFrames(
+        _frameBytes,
+      );
+
       // Decode all frames and build a GIF animation.
       final frames = <img.Image>[];
-      for (final bytes in _frameBytes) {
+      for (final bytes in compressedFrames) {
         var decoded = img.decodeImage(bytes);
         if (decoded == null) continue;
         // Resize to 512x512
@@ -739,15 +530,33 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
           interpolation: img.Interpolation.linear,
         );
 
-        // Burn text into each frame if overlay text is set
+        // Burn text into each frame if overlay text is set,
+        // applying the selected text animation transform per frame.
         if (_overlayText != null && _overlayText!.isNotEmpty) {
+          const baseX = _kStickerSize ~/ 4;
+          const baseY = _kStickerSize - 80;
+          final transform = computeTextTransform(
+            animation: _textAnimation,
+            frameIndex: frames.length, // current frame index
+            totalFrames: compressedFrames.length,
+          );
+
+          final drawX = (baseX + transform.dx).clamp(0, _kStickerSize - 1);
+          final drawY = (baseY + transform.dy).clamp(0, _kStickerSize - 1);
+          final drawAlpha = transform.alpha.clamp(0, 255);
+
+          // Convert text color to RGBA components
+          final r = _textStyle.color.r.toInt();
+          final g = _textStyle.color.g.toInt();
+          final b = _textStyle.color.b.toInt();
+
           img.drawString(
             decoded,
             _overlayText!,
             font: img.arial24,
-            x: _kStickerSize ~/ 4,
-            y: _kStickerSize - 80,
-            color: img.ColorRgba8(255, 255, 255, 230),
+            x: drawX,
+            y: drawY,
+            color: img.ColorRgba8(r, g, b, drawAlpha),
           );
         }
 
@@ -1131,8 +940,8 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
               color: _framePaths.length >= _kMaxFrames
-                  ? AppColors.coral.withOpacity(0.15)
-                  : AppColors.purple.withOpacity(0.15),
+                  ? AppColors.coral.withValues(alpha:0.15)
+                  : AppColors.purple.withValues(alpha:0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -1191,8 +1000,8 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           color: canAdd
-              ? AppColors.purple.withOpacity(0.12)
-              : Colors.grey.withOpacity(0.1),
+              ? AppColors.purple.withValues(alpha:0.12)
+              : Colors.grey.withValues(alpha:0.1),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: canAdd ? AppColors.purple : Colors.grey.shade300,
@@ -1230,7 +1039,7 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: AppColors.coral.withOpacity(0.3),
+                    color: AppColors.coral.withValues(alpha:0.3),
                     blurRadius: 8,
                   ),
                 ]
@@ -1308,10 +1117,10 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
             width: 260,
             height: 260,
             decoration: BoxDecoration(
-              color: AppColors.purple.withOpacity(0.08),
+              color: AppColors.purple.withValues(alpha:0.08),
               borderRadius: BorderRadius.circular(28),
               border: Border.all(
-                color: AppColors.purple.withOpacity(0.3),
+                color: AppColors.purple.withValues(alpha:0.3),
                 width: 2,
               ),
             ),
@@ -1321,7 +1130,7 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                 Icon(
                   Icons.add_photo_alternate_rounded,
                   size: 64,
-                  color: AppColors.purple.withOpacity(0.5),
+                  color: AppColors.purple.withValues(alpha:0.5),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -1364,7 +1173,7 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.purple.withOpacity(0.15),
+                  color: AppColors.purple.withValues(alpha:0.15),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -1394,25 +1203,27 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.4),
+                        color: Colors.black.withValues(alpha:0.4),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text(
-                        _overlayText!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: _textColor,
-                          fontSize: (_textSize * 0.6).clamp(12.0, 28.0),
-                          fontWeight:
-                              _textBold ? FontWeight.w700 : FontWeight.w400,
-                          shadows: const [
-                            Shadow(
-                              color: Colors.black54,
-                              blurRadius: 4,
-                              offset: Offset(1, 1),
+                      child: Stack(
+                        children: [
+                          if (_textStyle.hasOutline)
+                            Text(
+                              _overlayText!,
+                              textAlign: TextAlign.center,
+                              style: _textStyle.toOutlineTextStyle(
+                                overrideSize: (_textStyle.size * 0.6).clamp(12.0, 28.0),
+                              ),
                             ),
-                          ],
-                        ),
+                          Text(
+                            _overlayText!,
+                            textAlign: TextAlign.center,
+                            style: _textStyle.toTextStyle(
+                              overrideSize: (_textStyle.size * 0.6).clamp(12.0, 28.0),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -1452,10 +1263,10 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.purple.withOpacity(0.1),
+          color: AppColors.purple.withValues(alpha:0.1),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppColors.purple.withOpacity(0.3),
+            color: AppColors.purple.withValues(alpha:0.3),
           ),
         ),
         child: Row(
@@ -1478,7 +1289,7 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.coral.withOpacity(0.15),
+                  color: AppColors.coral.withValues(alpha:0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -1544,19 +1355,31 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
                 child: SliderTheme(
                   data: SliderThemeData(
                     activeTrackColor: AppColors.purple,
-                    inactiveTrackColor: AppColors.purple.withOpacity(0.2),
+                    inactiveTrackColor: AppColors.purple.withValues(alpha:0.2),
                     thumbColor: AppColors.purple,
-                    overlayColor: AppColors.purple.withOpacity(0.1),
+                    overlayColor: AppColors.purple.withValues(alpha:0.1),
                     trackHeight: 4,
                     thumbShape: const RoundSliderThumbShape(
                       enabledThumbRadius: 8,
                     ),
                   ),
                   child: Slider(
-                    value: _fps.toDouble(),
+                    value: _fps.toDouble().clamp(
+                      StickerGuardrails.minFps.toDouble(),
+                      (_isVideoSourced
+                              ? StickerGuardrails.videoMaxFps
+                              : StickerGuardrails.maxFps)
+                          .toDouble(),
+                    ),
                     min: StickerGuardrails.minFps.toDouble(),
-                    max: StickerGuardrails.maxFps.toDouble(),
-                    divisions: StickerGuardrails.maxFps - StickerGuardrails.minFps,
+                    max: (_isVideoSourced
+                            ? StickerGuardrails.videoMaxFps
+                            : StickerGuardrails.maxFps)
+                        .toDouble(),
+                    divisions: (_isVideoSourced
+                            ? StickerGuardrails.videoMaxFps
+                            : StickerGuardrails.maxFps) -
+                        StickerGuardrails.minFps,
                     onChanged: (v) => _setFps(v),
                   ),
                 ),
@@ -1604,7 +1427,7 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: sizeColor.withOpacity(0.15),
+                color: sizeColor.withValues(alpha:0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(

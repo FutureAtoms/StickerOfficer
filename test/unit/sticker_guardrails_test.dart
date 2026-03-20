@@ -747,4 +747,159 @@ void main() {
       expect(errors, isEmpty);
     });
   });
+
+  // ===========================================================================
+  // 11. Video-specific guardrails
+  // ===========================================================================
+
+  group('Video-specific constants', () {
+    test('videoMaxFrames is 75 (5s x 15fps)', () {
+      expect(StickerGuardrails.videoMaxFrames, 75);
+    });
+
+    test('videoMaxFps is 15', () {
+      expect(StickerGuardrails.videoMaxFps, 15);
+    });
+
+    test('videoMinFps is 8', () {
+      expect(StickerGuardrails.videoMinFps, 8);
+    });
+
+    test('videoMaxDurationMs is 5000', () {
+      expect(StickerGuardrails.videoMaxDurationMs, 5000);
+    });
+
+    test('qualityFpsStops has 5 stops', () {
+      expect(StickerGuardrails.qualityFpsStops.length, 5);
+      expect(StickerGuardrails.qualityFpsStops, [8, 10, 12, 13, 15]);
+    });
+
+    test('qualityResStops has 5 stops matching FPS stops', () {
+      expect(StickerGuardrails.qualityResStops.length, 5);
+      expect(StickerGuardrails.qualityResStops, [512, 448, 384, 352, 320]);
+    });
+
+    test('qualityColorStops has 5 stops', () {
+      expect(StickerGuardrails.qualityColorStops.length, 5);
+      expect(StickerGuardrails.qualityColorStops, [256, 224, 192, 160, 128]);
+    });
+
+    test('global maxFrames and maxFps unchanged', () {
+      expect(StickerGuardrails.maxFrames, 8);
+      expect(StickerGuardrails.maxFps, 8);
+    });
+  });
+
+  group('validateVideoSticker', () {
+    test('valid video sticker passes', () {
+      final errors = StickerGuardrails.validateVideoSticker(
+        frameCount: 60,
+        fps: 12,
+        sizeBytes: 400 * 1024,
+      );
+      expect(errors, isEmpty);
+    });
+
+    test('too many frames fails', () {
+      final errors = StickerGuardrails.validateVideoSticker(
+        frameCount: 80,
+        fps: 12,
+        sizeBytes: 400 * 1024,
+      );
+      expect(errors, isNotEmpty);
+      expect(errors.first, contains('75'));
+    });
+
+    test('fps too high fails', () {
+      final errors = StickerGuardrails.validateVideoSticker(
+        frameCount: 30,
+        fps: 20,
+        sizeBytes: 400 * 1024,
+      );
+      expect(errors, isNotEmpty);
+      expect(errors.first, contains('15'));
+    });
+
+    test('fps too low fails', () {
+      final errors = StickerGuardrails.validateVideoSticker(
+        frameCount: 30,
+        fps: 3,
+        sizeBytes: 400 * 1024,
+      );
+      expect(errors, isNotEmpty);
+    });
+
+    test('size over 500KB fails', () {
+      final errors = StickerGuardrails.validateVideoSticker(
+        frameCount: 30,
+        fps: 12,
+        sizeBytes: 600 * 1024,
+      );
+      expect(errors, isNotEmpty);
+      expect(errors.first, contains('big'));
+    });
+
+    test('bad text fails', () {
+      final errors = StickerGuardrails.validateVideoSticker(
+        frameCount: 30,
+        fps: 12,
+        sizeBytes: 400 * 1024,
+        text: 'damn',
+      );
+      expect(errors, isNotEmpty);
+    });
+  });
+
+  group('estimateGifSizeKB', () {
+    test('returns positive value', () {
+      final size = StickerGuardrails.estimateGifSizeKB(
+        durationSec: 3.0,
+        fps: 12,
+        resolution: 384,
+      );
+      expect(size, greaterThan(0));
+    });
+
+    test('higher fps = larger estimate', () {
+      final lowFps = StickerGuardrails.estimateGifSizeKB(
+        durationSec: 3.0,
+        fps: 8,
+        resolution: 384,
+      );
+      final highFps = StickerGuardrails.estimateGifSizeKB(
+        durationSec: 3.0,
+        fps: 15,
+        resolution: 384,
+      );
+      expect(highFps, greaterThan(lowFps));
+    });
+
+    test('higher resolution = larger estimate', () {
+      final lowRes = StickerGuardrails.estimateGifSizeKB(
+        durationSec: 3.0,
+        fps: 12,
+        resolution: 320,
+      );
+      final highRes = StickerGuardrails.estimateGifSizeKB(
+        durationSec: 3.0,
+        fps: 12,
+        resolution: 512,
+      );
+      expect(highRes, greaterThan(lowRes));
+    });
+
+    test('longer duration = larger estimate', () {
+      final short = StickerGuardrails.estimateGifSizeKB(
+        durationSec: 1.0,
+        fps: 12,
+        resolution: 384,
+      );
+      final long = StickerGuardrails.estimateGifSizeKB(
+        durationSec: 5.0,
+        fps: 12,
+        resolution: 384,
+      );
+      expect(long, greaterThan(short));
+    });
+  });
 }

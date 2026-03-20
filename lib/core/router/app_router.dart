@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../constants/app_colors.dart';
 import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/editor/presentation/editor_screen.dart';
@@ -16,6 +18,47 @@ import '../widgets/main_shell.dart';
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/home',
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.emoji_emotions_rounded,
+                size: 80,
+                color: AppColors.coral.withValues(alpha: 0.4),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Oops! Page not found',
+                style: Theme.of(context).textTheme.headlineMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'The sticker you\'re looking for ran away!',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => context.go('/home'),
+                icon: const Icon(Icons.home_rounded),
+                label: const Text('Go Home'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.coral,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
     routes: [
       // Onboarding
       GoRoute(
@@ -55,8 +98,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/editor',
         builder: (context, state) {
-          final imagePath = state.extra as String?;
-          return EditorScreen(imagePath: imagePath);
+          // extra can be a String (imagePath) or a Map with imagePath + packId
+          final extra = state.extra;
+          String? imagePath;
+          String? packId;
+          if (extra is String) {
+            imagePath = extra;
+          } else if (extra is Map<String, String?>) {
+            imagePath = extra['imagePath'];
+            packId = extra['packId'];
+          }
+          return EditorScreen(imagePath: imagePath, targetPackId: packId);
         },
       ),
       GoRoute(
@@ -73,8 +125,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/animated-editor',
         builder: (context, state) {
-          final initialFrames = state.extra as List<String>?;
-          return AnimatedStickerScreen(initialFramePaths: initialFrames);
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            return AnimatedStickerScreen(
+              initialFramePaths: extra['frames'] as List<String>?,
+              ffmpegGifPath: extra['gifPath'] as String?,
+              initialFps: extra['fps'] as int?,
+            );
+          }
+          return AnimatedStickerScreen(
+            initialFramePaths: extra as List<String>?,
+          );
         },
       ),
       GoRoute(

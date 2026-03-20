@@ -56,7 +56,7 @@ void main() {
     testWidgets('shows kid-friendly description', (tester) async {
       await pumpScreen(tester);
       expect(
-        find.textContaining("we'll turn it into an animated sticker"),
+        find.textContaining("we'll turn your favorite moment into a smooth animated sticker"),
         findsOneWidget,
       );
     });
@@ -74,12 +74,12 @@ void main() {
   group('Guardrail Tips', () {
     testWidgets('shows max duration tip (5 seconds)', (tester) async {
       await pumpScreen(tester);
-      expect(find.text('Max 5 seconds'), findsOneWidget);
+      expect(find.text('Select up to 5 seconds'), findsOneWidget);
     });
 
-    testWidgets('shows max frames tip (8 frames)', (tester) async {
+    testWidgets('shows quality tip', (tester) async {
       await pumpScreen(tester);
-      expect(find.text('Extracts up to 8 frames'), findsOneWidget);
+      expect(find.text('Adjust quality vs. smoothness'), findsOneWidget);
     });
 
     testWidgets('shows size limit tip (500 KB)', (tester) async {
@@ -90,7 +90,7 @@ void main() {
     testWidgets('tip icons are visible', (tester) async {
       await pumpScreen(tester);
       expect(find.byIcon(Icons.timer_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.photo_library_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
       expect(find.byIcon(Icons.data_usage_rounded), findsOneWidget);
     });
   });
@@ -165,9 +165,9 @@ void main() {
       expect(find.textContaining('5'), findsWidgets);
     });
 
-    testWidgets('max frames shown as 8', (tester) async {
+    testWidgets('quality tip mentions smoothness', (tester) async {
       await pumpScreen(tester);
-      expect(find.textContaining('8'), findsWidgets);
+      expect(find.textContaining('smoothness'), findsWidgets);
     });
 
     testWidgets('size limit shown as 500', (tester) async {

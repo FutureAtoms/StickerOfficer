@@ -47,12 +47,12 @@ void main() {
 
     testWidgets('shows max duration tip', (tester) async {
       await pumpScreen(tester);
-      expect(find.text('Max 5 seconds'), findsOneWidget);
+      expect(find.text('Select up to 5 seconds'), findsOneWidget);
     });
 
-    testWidgets('shows frame extraction tip', (tester) async {
+    testWidgets('shows quality tip', (tester) async {
       await pumpScreen(tester);
-      expect(find.text('Extracts up to 8 frames'), findsOneWidget);
+      expect(find.text('Adjust quality vs. smoothness'), findsOneWidget);
     });
 
     testWidgets('shows size limit tip', (tester) async {
@@ -68,7 +68,7 @@ void main() {
     testWidgets('shows kid-friendly description', (tester) async {
       await pumpScreen(tester);
       expect(
-        find.textContaining("we'll turn it into an animated sticker"),
+        find.textContaining("we'll turn your favorite moment into a smooth animated sticker"),
         findsOneWidget,
       );
     });
@@ -92,7 +92,7 @@ void main() {
     testWidgets('tips are in a container', (tester) async {
       await pumpScreen(tester);
       expect(find.byIcon(Icons.timer_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.photo_library_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.tune_rounded), findsOneWidget);
       expect(find.byIcon(Icons.data_usage_rounded), findsOneWidget);
     });
   });
