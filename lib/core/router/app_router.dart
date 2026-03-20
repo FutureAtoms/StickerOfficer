@@ -5,6 +5,7 @@ import '../constants/app_colors.dart';
 import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/editor/presentation/editor_screen.dart';
+import '../../features/editor/presentation/bulk_edit_screen.dart';
 import '../../features/editor/presentation/animated_sticker_screen.dart';
 import '../../features/editor/presentation/video_to_sticker_screen.dart';
 import '../../features/packs/presentation/my_packs_screen.dart';
@@ -98,17 +99,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/editor',
         builder: (context, state) {
-          // extra can be a String (imagePath) or a Map with imagePath + packId
+          // extra can be:
+          //   null        → blank editor
+          //   String      → imagePath
+          //   Map<String, dynamic> → imagePath, packId, bulkMode
           final extra = state.extra;
           String? imagePath;
           String? packId;
+          bool bulkMode = false;
           if (extra is String) {
             imagePath = extra;
-          } else if (extra is Map<String, String?>) {
-            imagePath = extra['imagePath'];
-            packId = extra['packId'];
+          } else if (extra is Map<String, dynamic>) {
+            imagePath = extra['imagePath'] as String?;
+            packId = extra['packId'] as String?;
+            bulkMode = extra['bulkMode'] as bool? ?? false;
           }
-          return EditorScreen(imagePath: imagePath, targetPackId: packId);
+          return EditorScreen(
+            imagePath: imagePath,
+            targetPackId: packId,
+            bulkMode: bulkMode,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/bulk-editor/:packId',
+        builder: (context, state) {
+          final packId = state.pathParameters['packId']!;
+          return BulkEditScreen(packId: packId);
         },
       ),
       GoRoute(

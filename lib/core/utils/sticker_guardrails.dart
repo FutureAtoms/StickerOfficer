@@ -320,6 +320,31 @@ class StickerGuardrails {
   }
 
   // =========================================================================
+  // Normalization — best-effort 512x512 PNG
+  // =========================================================================
+
+  /// Normalizes any image bytes to a 512x512 PNG.
+  ///
+  /// Attempts to keep the result under [maxStaticSizeBytes] by quantizing
+  /// colors, but returns the PNG as-is if it still exceeds the limit.
+  /// WhatsApp export handles final size enforcement via WebP conversion.
+  static Uint8List normalizeStaticSticker(Uint8List bytes) {
+    final decoded = img.decodeImage(bytes);
+    if (decoded == null) return bytes;
+
+    final resized = _resizeAndCenter(decoded, stickerSize);
+    final png = Uint8List.fromList(img.encodePng(resized, level: 9));
+    if (png.lengthInBytes <= maxStaticSizeBytes) return png;
+
+    // Quantize to reduce size
+    final quantized = img.quantize(resized, numberOfColors: 32);
+    final quantizedPng = Uint8List.fromList(img.encodePng(quantized, level: 9));
+
+    // Return best-effort — may still be > 100KB for photographic content
+    return quantizedPng.lengthInBytes <= maxStaticSizeBytes ? quantizedPng : png;
+  }
+
+  // =========================================================================
   // Compression utilities
   // =========================================================================
 
