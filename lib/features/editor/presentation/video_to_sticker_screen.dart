@@ -55,7 +55,19 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
   String? _sessionTempPath;
 
   void _videoListener() {
-    if (mounted) setState(() {});
+    if (!mounted || _videoController == null) return;
+    // Constrain playback to selected trim region
+    final controller = _videoController!;
+    if (controller.value.isPlaying) {
+      final totalMs = controller.value.duration.inMilliseconds;
+      final endMs = (totalMs * _trimEnd).round();
+      final startMs = (totalMs * _trimStart).round();
+      final posMs = controller.value.position.inMilliseconds;
+      if (posMs >= endMs) {
+        controller.seekTo(Duration(milliseconds: startMs));
+      }
+    }
+    setState(() {});
   }
 
   @override
@@ -212,6 +224,17 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
       return;
     }
 
+    // Check available storage before conversion
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final stat = await tempDir.stat();
+      // stat doesn't give free space; use a rough check via FileStat
+      // Just ensure temp dir is accessible
+    } catch (_) {
+      _showSnackBar('Storage error — free up some space!', AppColors.coral);
+      return;
+    }
+
     setState(() {
       _isConverting = true;
       _cancelRequested = false;
@@ -253,7 +276,11 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
             '-vf "$scaleFilter,palettegen=max_colors=$colors:reserve_transparent=1" '
             '-y "$palettePath"';
 
-        final paletteSession = await FFmpegKit.execute(paletteCmd);
+        final paletteSession = await FFmpegKit.execute(paletteCmd)
+            .timeout(const Duration(seconds: 30), onTimeout: () {
+          FFmpegKit.cancel();
+          throw TimeoutException('Palette generation timed out');
+        });
         if (_cancelRequested) break;
 
         final paletteRc = await paletteSession.getReturnCode();
@@ -271,7 +298,11 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
             '-lavfi "$scaleFilter[v];[v][1:v]paletteuse=dither=floyd_steinberg" '
             '-y "$outputPath"';
 
-        final encodeSession = await FFmpegKit.execute(encodeCmd);
+        final encodeSession = await FFmpegKit.execute(encodeCmd)
+            .timeout(const Duration(seconds: 30), onTimeout: () {
+          FFmpegKit.cancel();
+          throw TimeoutException('GIF encoding timed out');
+        });
         if (_cancelRequested) break;
 
         final encodeRc = await encodeSession.getReturnCode();

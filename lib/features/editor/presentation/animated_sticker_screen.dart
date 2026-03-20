@@ -945,7 +945,9 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '${_framePaths.length}/$_kMaxFrames',
+              _isVideoSourced
+                  ? '${_framePaths.length} frames'
+                  : '${_framePaths.length}/$_kMaxFrames',
               style: theme.textTheme.labelLarge?.copyWith(
                 color: _framePaths.length >= _kMaxFrames
                     ? AppColors.coral
@@ -958,31 +960,42 @@ class _AnimatedStickerScreenState extends ConsumerState<AnimatedStickerScreen>
 
           // Scrollable frame thumbnails
           Expanded(
-            child: ReorderableListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _framePaths.length + 1,
-              proxyDecorator: (child, index, animation) {
-                return Material(
-                  color: Colors.transparent,
-                  elevation: 4,
-                  borderRadius: BorderRadius.circular(12),
-                  child: child,
-                );
-              },
-              onReorder: (oldIndex, newIndex) {
-                if (oldIndex >= _framePaths.length ||
-                    newIndex > _framePaths.length) {
-                  return;
-                }
-                _onReorder(oldIndex, newIndex);
-              },
-              itemBuilder: (context, index) {
-                if (index == _framePaths.length) {
-                  return _buildAddButton(key: const ValueKey('add-btn'));
-                }
-                return _buildFrameThumb(index, key: ValueKey('frame-$index'));
-              },
-            ),
+            child: _isVideoSourced
+                ? ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _framePaths.length,
+                    itemBuilder: (context, index) {
+                      return _buildFrameThumb(index,
+                          key: ValueKey('frame-$index'));
+                    },
+                  )
+                : ReorderableListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _framePaths.length + 1,
+                    proxyDecorator: (child, index, animation) {
+                      return Material(
+                        color: Colors.transparent,
+                        elevation: 4,
+                        borderRadius: BorderRadius.circular(12),
+                        child: child,
+                      );
+                    },
+                    onReorder: (oldIndex, newIndex) {
+                      if (oldIndex >= _framePaths.length ||
+                          newIndex > _framePaths.length) {
+                        return;
+                      }
+                      _onReorder(oldIndex, newIndex);
+                    },
+                    itemBuilder: (context, index) {
+                      if (index == _framePaths.length) {
+                        return _buildAddButton(
+                            key: const ValueKey('add-btn'));
+                      }
+                      return _buildFrameThumb(index,
+                          key: ValueKey('frame-$index'));
+                    },
+                  ),
           ),
         ],
       ),
