@@ -5,6 +5,8 @@ import packs from './routes/packs';
 import challengeRoutes from './routes/challenges';
 import feedRoutes from './routes/feed';
 import generateRoutes from './routes/generate';
+import moderation, { admin } from './routes/moderation';
+import profile from './routes/profile';
 
 export type Env = {
   DB: D1Database;
@@ -36,9 +38,36 @@ app.route('/feed', feedRoutes);
 // AI generation routes: POST /generate
 app.route('/generate', generateRoutes);
 
+// Moderation routes: /report, /block/:publicId
+app.route('/', moderation);
+
+// Profile routes: /profile/:publicId
+app.route('/profile', profile);
+
+// Admin routes: /admin/reports, /admin/action, /admin/challenges
+app.route('/admin', admin);
+
 export default {
   fetch: app.fetch,
-  async scheduled(event: ScheduledEvent, env: Env) {
-    // Challenge lifecycle cron — implemented later
+  async scheduled(_event: ScheduledEvent, env: Env) {
+    const now = new Date().toISOString();
+    // upcoming -> active
+    await env.DB.prepare(
+      "UPDATE challenges SET status = 'active' WHERE status = 'upcoming' AND starts_at <= ?",
+    )
+      .bind(now)
+      .run();
+    // active -> voting
+    await env.DB.prepare(
+      "UPDATE challenges SET status = 'voting' WHERE status = 'active' AND voting_at <= ?",
+    )
+      .bind(now)
+      .run();
+    // voting -> completed
+    await env.DB.prepare(
+      "UPDATE challenges SET status = 'completed' WHERE status = 'voting' AND ends_at <= ?",
+    )
+      .bind(now)
+      .run();
   },
 };
