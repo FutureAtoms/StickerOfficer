@@ -4,11 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'huggingface_api.dart';
 
-// API key loaded from --dart-define=HF_API_KEY=xxx at build time.
-// Run: flutter run --dart-define=HF_API_KEY=your_key_here
-const kHuggingFaceApiKey = String.fromEnvironment('HF_API_KEY');
-
 /// Provides a singleton [HuggingFaceApiService] instance.
+/// AI generation is proxied through the Cloudflare Worker which
+/// handles API key management and rate limiting.
 final huggingFaceApiProvider = Provider<HuggingFaceApiService>((ref) {
   return HuggingFaceApiService();
 });

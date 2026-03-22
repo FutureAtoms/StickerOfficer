@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
@@ -38,7 +39,17 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
   ];
 
   Future<void> _generate() async {
-    if (_controller.text.trim().isEmpty) return;
+    if (_controller.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please describe what sticker you want!'),
+          backgroundColor: AppColors.coral,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
 
     HapticFeedback.mediumImpact();
     ref.read(aiGeneratingProvider.notifier).state = true;
@@ -48,17 +59,19 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
       final apiService = ref.read(huggingFaceApiProvider);
       final images = await apiService.generateSticker(
         prompt: _controller.text.trim(),
-        apiKey: kHuggingFaceApiKey,
       );
 
       if (!mounted) return;
 
       if (images.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
+          SnackBar(
+            content: const Text(
               'No images were generated. Please try a different prompt.',
             ),
+            backgroundColor: AppColors.coral,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       } else {
@@ -67,9 +80,14 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Generation failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Generation failed: $e'),
+          backgroundColor: AppColors.coral,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
     } finally {
       if (mounted) {
         ref.read(aiGeneratingProvider.notifier).state = false;
@@ -303,46 +321,53 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
           physics: const NeverScrollableScrollPhysics(),
           itemCount: stickers.length,
           itemBuilder: (context, index) {
-            return GestureDetector(
-              onTap: () => _showStickerOptions(stickers[index]),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.pastels[index % AppColors.pastels.length],
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.transparent, width: 3),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(17),
-                  child: Image.memory(
-                    stickers[index],
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.broken_image_rounded,
-                              size: 40,
-                              color: AppColors.purple.withValues(alpha: 0.4),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Failed to load',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
+            return Semantics(
+              button: true,
+              label: 'Generated sticker ${index + 1} of ${stickers.length}. Tap to edit or save.',
+              child: GestureDetector(
+                onTap: () => _showStickerOptions(stickers[index]),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.pastels[index % AppColors.pastels.length],
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.transparent, width: 3),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(17),
+                    child: Image.memory(
+                      stickers[index],
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.broken_image_rounded,
+                                size: 40,
+                                color: AppColors.purple.withValues(alpha: 0.4),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Failed to load',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
-            );
+            )
+            .animate()
+            .fadeIn(duration: 400.ms, delay: (index * 100).ms)
+            .scale(begin: const Offset(0.8, 0.8), end: const Offset(1, 1), duration: 400.ms, delay: (index * 100).ms, curve: Curves.easeOutBack);
           },
         ),
         const SizedBox(height: 16),
@@ -372,6 +397,7 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
         title: const Text('AI Sticker Generator'),
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
+          tooltip: 'Close',
           onPressed: () => context.pop(),
         ),
       ),
@@ -436,32 +462,41 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
               spacing: 8,
               runSpacing: 8,
               children:
-                  _suggestions.map((s) {
-                    return GestureDetector(
-                      onTap: () {
-                        _controller.text = s;
-                        ref.read(aiPromptProvider.notifier).state = s;
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              AppColors.pastels[s.hashCode.abs() %
-                                  AppColors.pastels.length],
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          s,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
+                  _suggestions.asMap().entries.map((entry) {
+                    final s = entry.value;
+                    final i = entry.key;
+                    return Semantics(
+                      button: true,
+                      label: 'Suggestion: $s',
+                      child: GestureDetector(
+                        onTap: () {
+                          _controller.text = s;
+                          ref.read(aiPromptProvider.notifier).state = s;
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                AppColors.pastels[s.hashCode.abs() %
+                                    AppColors.pastels.length],
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            s,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       ),
-                    );
+                    )
+                    .animate()
+                    .fadeIn(duration: 400.ms, delay: (i * 60).ms)
+                    .slideX(begin: 0.1, end: 0, duration: 400.ms, delay: (i * 60).ms);
                   }).toList(),
             ),
             const SizedBox(height: 24),
