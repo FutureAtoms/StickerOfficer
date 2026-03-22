@@ -14,8 +14,6 @@ void main() async {
   // Initialize local storage
   final prefs = await SharedPreferences.getInstance();
 
-  // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
   runApp(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],

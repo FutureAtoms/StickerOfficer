@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -10,6 +11,8 @@ import 'package:uuid/uuid.dart';
 import 'models/challenge.dart';
 import 'models/sticker_pack.dart';
 import 'repositories/pack_repository.dart';
+import '../services/auth_service.dart';
+import '../services/api_client.dart';
 
 // =============================================================================
 // SharedPreferences singleton
@@ -135,7 +138,7 @@ class PacksNotifier extends AsyncNotifier<List<StickerPack>> {
 
     // Seed pack definitions: 5 meme packs x 30 stickers = 150 total
     final demoPacks = <_SeedPack>[
-      _SeedPack(
+      const _SeedPack(
         name: 'Brainrot Memes',
         assetPrefix: 'brainrot_memes',
         count: 30,
@@ -144,7 +147,7 @@ class PacksNotifier extends AsyncNotifier<List<StickerPack>> {
         likeCount: 1247,
         downloadCount: 3891,
       ),
-      _SeedPack(
+      const _SeedPack(
         name: 'Reaction Memes',
         assetPrefix: 'reaction_memes',
         count: 30,
@@ -153,7 +156,7 @@ class PacksNotifier extends AsyncNotifier<List<StickerPack>> {
         likeCount: 982,
         downloadCount: 2756,
       ),
-      _SeedPack(
+      const _SeedPack(
         name: 'AI & Tech Memes',
         assetPrefix: 'ai_tech_memes',
         count: 30,
@@ -162,7 +165,7 @@ class PacksNotifier extends AsyncNotifier<List<StickerPack>> {
         likeCount: 1543,
         downloadCount: 4102,
       ),
-      _SeedPack(
+      const _SeedPack(
         name: 'Wholesome Vibes',
         assetPrefix: 'wholesome_memes',
         count: 30,
@@ -171,7 +174,7 @@ class PacksNotifier extends AsyncNotifier<List<StickerPack>> {
         likeCount: 2103,
         downloadCount: 5234,
       ),
-      _SeedPack(
+      const _SeedPack(
         name: 'Daily Life',
         assetPrefix: 'daily_life_memes',
         count: 30,
@@ -197,13 +200,15 @@ class PacksNotifier extends AsyncNotifier<List<StickerPack>> {
 
         try {
           final bytes = await rootBundle.load(assetPath);
+          // Seed stickers are already 512x512 — just copy as-is.
+          // Compression to ≤100KB happens at WhatsApp export time.
           await File(filePath).writeAsBytes(
             bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
           );
           stickerPaths.add(filePath);
           trayPath ??= filePath;
-        } catch (_) {
-          // Asset not found — skip this sticker
+        } catch (e) {
+          debugPrint('Failed to load seed asset $assetPath: $e');
         }
       }
 
@@ -413,3 +418,21 @@ class UserStats {
       'UserStats(packs: $packCount, stickers: $totalStickers, '
       'likes: $totalLikes, downloads: $totalDownloads)';
 }
+
+// =============================================================================
+// Auth + API Client
+// =============================================================================
+
+const _apiBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'http://localhost:8787',
+);
+
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService(baseUrl: _apiBaseUrl);
+});
+
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final auth = ref.read(authServiceProvider);
+  return ApiClient(baseUrl: _apiBaseUrl, authService: auth);
+});
