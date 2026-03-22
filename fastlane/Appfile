@@ -1,0 +1,6 @@
+app_identifier("com.futureatoms.stickerOfficer")
+# apple_id("YOUR_APPLE_ID")  # Set after Apple Developer enrollment
+# team_id("YOUR_TEAM_ID")    # Set after Apple Developer enrollment
+
+json_key_file("fastlane/play-store-key.json") # Google Play service account key
+package_name("com.futureatoms.sticker_officer")

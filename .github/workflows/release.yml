@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  android-release:
+    name: Android Play Store
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: stable
+          cache: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: fastlane
+
+      - name: Decode keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+
+      - name: Create key.properties
+        run: |
+          cat > android/key.properties <<EOL
+          storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=upload
+          storeFile=upload-keystore.jks
+          EOL
+
+      - name: Decode Play Store key
+        run: echo "${{ secrets.PLAY_STORE_KEY_JSON }}" | base64 --decode > fastlane/play-store-key.json
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build and deploy
+        working-directory: fastlane
+        run: bundle exec fastlane android deploy
+
+  ios-release:
+    name: iOS App Store
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: stable
+          cache: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: fastlane
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build and deploy to TestFlight
+        working-directory: fastlane
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_AUTH }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.ASC_API_KEY }}
+        run: bundle exec fastlane ios beta

@@ -1,0 +1,1 @@
+Initial release! Create AI stickers, build packs, and export to WhatsApp. Features include AI generation, community feed, weekly challenges, and a powerful sticker editor.

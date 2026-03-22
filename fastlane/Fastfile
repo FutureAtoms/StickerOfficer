@@ -1,0 +1,61 @@
+default_platform(:android)
+
+platform :android do
+  desc "Build Android App Bundle for Play Store"
+  lane :build do
+    sh("cd .. && flutter build appbundle --release")
+  end
+
+  desc "Deploy to Play Store (internal track)"
+  lane :deploy do
+    build
+    upload_to_play_store(
+      track: "internal",
+      aab: "../build/app/outputs/bundle/release/app-release.aab",
+      skip_upload_metadata: false,
+      skip_upload_changelogs: false,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+
+  desc "Deploy to Play Store (production)"
+  lane :release do
+    build
+    upload_to_play_store(
+      track: "production",
+      aab: "../build/app/outputs/bundle/release/app-release.aab",
+      skip_upload_metadata: false,
+      skip_upload_changelogs: false,
+      skip_upload_images: false,
+      skip_upload_screenshots: false,
+    )
+  end
+end
+
+platform :ios do
+  desc "Build iOS IPA"
+  lane :build do
+    # match(type: "appstore")  # Uncomment after match is configured
+    sh("cd .. && flutter build ipa --release --export-options-plist=ios/ExportOptions.plist")
+  end
+
+  desc "Deploy to TestFlight"
+  lane :beta do
+    build
+    upload_to_testflight(
+      ipa: "../build/ios/ipa/StickerOfficer.ipa",
+      skip_waiting_for_build_processing: true,
+    )
+  end
+
+  desc "Deploy to App Store"
+  lane :release do
+    build
+    deliver(
+      ipa: "../build/ios/ipa/StickerOfficer.ipa",
+      submit_for_review: false,
+      force: true,
+    )
+  end
+end

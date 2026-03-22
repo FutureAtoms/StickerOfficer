@@ -1,0 +1,27 @@
+StickerOfficer makes it easy to create custom sticker packs using AI or your own photos.
+
+CREATE WITH AI
+Describe any sticker you want and AI generates it for you. From funny reactions to cute characters, the possibilities are endless.
+
+BUILD PACKS
+Organize stickers into packs of up to 30. Import from your photo library, use the editor to perfect them, or generate with AI.
+
+SHARE VIA MESSAGING APPS
+Share your sticker packs through the iOS share sheet to WhatsApp and other messaging apps.
+
+COMMUNITY
+Browse trending packs, discover creators, and join weekly creative challenges. Like and save your favorite packs.
+
+POWERFUL EDITOR
+Background removal, filters, text overlays, and bulk editing. Everything you need to create professional-looking stickers.
+
+FEATURES:
+- AI sticker generation from text descriptions
+- Built-in editor with background removal
+- Share stickers via iOS share sheet
+- Community feed with trending packs
+- Weekly creative challenges
+- Bulk image editing
+- Photo and video import
+
+No account required. Start creating immediately.
