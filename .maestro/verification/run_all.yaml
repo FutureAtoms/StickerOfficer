@@ -1,0 +1,18 @@
+appId: com.futureatoms.sticker_officer
+---
+- runFlow: 01_onboarding.yaml
+- runFlow: 02_feed_browse.yaml
+- runFlow: 03_search.yaml
+- runFlow: 04_create_pack.yaml
+- runFlow: 05_my_packs.yaml
+- runFlow: 06_challenges.yaml
+- runFlow: 07_profile.yaml
+- runFlow: 08_ai_generate.yaml
+- runFlow: 09_editor.yaml
+- runFlow: 10_whatsapp_export.yaml
+- runFlow: 11_bulk_edit.yaml
+- runFlow: 12_video_import.yaml
+- runFlow: 13_like_download.yaml
+- runFlow: 14_report.yaml
+- runFlow: 15_settings.yaml
+- runFlow: 16_navigation.yaml

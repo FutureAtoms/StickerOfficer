@@ -1,0 +1,6 @@
+appId: com.futureatoms.sticker_officer
+---
+- runFlow: ../utils/navigate_past_onboarding.yaml
+- tapOn: "Challenges"
+- waitForAnimationToEnd
+- assertVisible: "Active"

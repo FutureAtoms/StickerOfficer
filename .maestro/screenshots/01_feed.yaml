@@ -1,0 +1,5 @@
+appId: com.futureatoms.sticker_officer
+---
+- runFlow: ../utils/navigate_past_onboarding.yaml
+- waitForAnimationToEnd
+- takeScreenshot: screenshots/01_feed

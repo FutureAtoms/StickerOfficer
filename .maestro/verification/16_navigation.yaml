@@ -1,0 +1,15 @@
+appId: com.futureatoms.sticker_officer
+---
+- runFlow: ../utils/navigate_past_onboarding.yaml
+- tapOn: "Search"
+- waitForAnimationToEnd
+- tapOn: "Create"
+- waitForAnimationToEnd
+- tapOn: "My Packs"
+- waitForAnimationToEnd
+- tapOn: "Challenges"
+- waitForAnimationToEnd
+- tapOn: "Profile"
+- waitForAnimationToEnd
+- tapOn: "Feed"
+- waitForAnimationToEnd
