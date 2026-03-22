@@ -33,6 +33,9 @@ app.route('/challenges', challengeRoutes);
 // Feed routes: /feed (trending, recent)
 app.route('/feed', feedRoutes);
 
+// AI generation routes: POST /generate
+app.route('/generate', generateRoutes);
+
 export default {
   fetch: app.fetch,
   async scheduled(event: ScheduledEvent, env: Env) {
