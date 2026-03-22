@@ -47,6 +47,33 @@ app.route('/profile', profile);
 // Admin routes: /admin/reports, /admin/action, /admin/challenges
 app.route('/admin', admin);
 
+// R2 sticker serving: /r2/catalog.json, /r2/:packId/:sticker
+app.get('/r2/catalog.json', async (c) => {
+  const object = await c.env.R2.get('catalog.json');
+  if (!object) return c.json({ error: 'catalog not found' }, 404);
+  c.header('Content-Type', 'application/json');
+  c.header('Cache-Control', 'public, max-age=300');
+  return c.body(object.body as ReadableStream);
+});
+
+app.get('/r2/:packId/:sticker', async (c) => {
+  const { packId, sticker } = c.req.param();
+  const key = `packs/${packId}/${sticker}`;
+  const object = await c.env.R2.get(key);
+  if (!object) return c.json({ error: 'sticker not found' }, 404);
+
+  const ext = sticker.split('.').pop()?.toLowerCase();
+  const contentType =
+    ext === 'webp' ? 'image/webp' :
+    ext === 'png' ? 'image/png' :
+    ext === 'gif' ? 'image/gif' :
+    'application/octet-stream';
+
+  c.header('Content-Type', contentType);
+  c.header('Cache-Control', 'public, max-age=86400');
+  return c.body(object.body as ReadableStream);
+});
+
 export default {
   fetch: app.fetch,
   async scheduled(_event: ScheduledEvent, env: Env) {
