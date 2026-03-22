@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import authRoutes from './routes/auth';
 
 export type Env = {
   DB: D1Database;
@@ -15,6 +16,9 @@ const app = new Hono<{ Bindings: Env }>();
 app.use('*', cors());
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
+
+// Auth routes: /auth/register, /auth/refresh, /auth/accept-terms
+app.route('/auth', authRoutes);
 
 export default {
   fetch: app.fetch,
