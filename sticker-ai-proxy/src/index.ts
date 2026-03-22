@@ -1,6 +1,10 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import authRoutes from './routes/auth';
+import packs from './routes/packs';
+import challengeRoutes from './routes/challenges';
+import feedRoutes from './routes/feed';
+import generateRoutes from './routes/generate';
 
 export type Env = {
   DB: D1Database;
@@ -19,6 +23,15 @@ app.get('/health', (c) => c.json({ status: 'ok' }));
 
 // Auth routes: /auth/register, /auth/refresh, /auth/accept-terms
 app.route('/auth', authRoutes);
+
+// Pack routes: /packs (publish, like, download, list)
+app.route('/packs', packs);
+
+// Challenge routes: /challenges (list, submit, vote, submissions)
+app.route('/challenges', challengeRoutes);
+
+// Feed routes: /feed (trending, recent)
+app.route('/feed', feedRoutes);
 
 export default {
   fetch: app.fetch,
