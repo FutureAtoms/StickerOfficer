@@ -55,3 +55,8 @@ coverage/
 google-services.json
 GoogleService-Info.plist
 firebase_options.dart
+
+# Android signing
+key.properties
+*.jks
+*.keystore

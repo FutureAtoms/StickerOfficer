@@ -14,7 +14,6 @@ void main() async {
   // Initialize local storage
   final prefs = await SharedPreferences.getInstance();
 
-  // TODO: Initialize Firebase when configured
   // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(

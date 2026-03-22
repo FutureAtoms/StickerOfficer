@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bubbly_button.dart';
@@ -26,7 +27,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       icon: Icons.chat_rounded,
       title: 'Share on WhatsApp',
       description:
-          'One-click export to WhatsApp & Telegram. Your stickers, ready to send in seconds!',
+          'One-click export to WhatsApp. Your stickers, ready to send in seconds!',
       color: AppColors.whatsappGreen,
     ),
     _OnboardingPage(
@@ -142,11 +143,13 @@ class _OnboardingPage extends StatelessWidget {
             width: 140,
             height: 140,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, size: 64, color: color),
-          ),
+          )
+          .animate(onPlay: (c) => c.repeat(reverse: true))
+          .scaleXY(begin: 1.0, end: 1.08, duration: 2000.ms, curve: Curves.easeInOut),
           const SizedBox(height: 40),
           Text(
             title,
@@ -154,7 +157,10 @@ class _OnboardingPage extends StatelessWidget {
               context,
             ).textTheme.displayLarge?.copyWith(color: color),
             textAlign: TextAlign.center,
-          ),
+          )
+          .animate()
+          .fadeIn(duration: 600.ms, delay: 200.ms)
+          .slideY(begin: 0.3, end: 0, duration: 600.ms, delay: 200.ms),
           const SizedBox(height: 16),
           Text(
             description,
@@ -163,7 +169,10 @@ class _OnboardingPage extends StatelessWidget {
               height: 1.6,
             ),
             textAlign: TextAlign.center,
-          ),
+          )
+          .animate()
+          .fadeIn(duration: 600.ms, delay: 400.ms)
+          .slideY(begin: 0.3, end: 0, duration: 600.ms, delay: 400.ms),
         ],
       ),
     );

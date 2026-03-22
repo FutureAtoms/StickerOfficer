@@ -390,34 +390,6 @@ class _PackDetailBody extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Telegram button
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.send_rounded),
-                      color: Colors.blue,
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text(
-                              'Telegram export coming soon!',
-                            ),
-                            backgroundColor: AppColors.teal,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   // WhatsApp button (PRIORITY #1)
                   Expanded(
                     child: WhatsAppButton(

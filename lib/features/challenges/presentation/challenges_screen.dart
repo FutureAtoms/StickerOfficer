@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/providers.dart';
@@ -25,7 +26,7 @@ class ChallengesScreen extends ConsumerWidget {
                     Icon(
                       Icons.emoji_events_rounded,
                       size: 64,
-                      color: AppColors.textSecondary.withOpacity(0.3),
+                      color: AppColors.textSecondary.withValues(alpha:0.3),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -42,21 +43,29 @@ class ChallengesScreen extends ConsumerWidget {
                 children: [
                   // Active / voting challenges
                   if (activeChallenges.isNotEmpty) ...[
-                    ...activeChallenges.map((challenge) {
+                    ...activeChallenges.asMap().entries.map((entry) {
+                      final challenge = entry.value;
+                      final i = entry.key;
                       final daysLeft = challenge.endDate
                           .difference(DateTime.now())
                           .inDays
                           .clamp(0, 999);
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: _ChallengeDetailCard(
-                          title: challenge.title,
-                          description: challenge.description,
-                          daysLeft: daysLeft,
-                          submissions: challenge.submissionCount,
-                          isActive: challenge.isActive,
+                        child: Semantics(
+                          label: '${challenge.title}, ${challenge.isActive ? "$daysLeft days left" : "Voting"}, ${ challenge.submissionCount} submissions',
+                          child: _ChallengeDetailCard(
+                            title: challenge.title,
+                            description: challenge.description,
+                            daysLeft: daysLeft,
+                            submissions: challenge.submissionCount,
+                            isActive: challenge.isActive,
+                          ),
                         ),
-                      );
+                      )
+                      .animate()
+                      .fadeIn(duration: 500.ms, delay: (i * 120).ms)
+                      .slideY(begin: 0.2, end: 0, duration: 500.ms, delay: (i * 120).ms, curve: Curves.easeOutCubic);
                     }),
                   ],
 
@@ -68,12 +77,15 @@ class ChallengesScreen extends ConsumerWidget {
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 12),
-                    ...pastChallenges.map(
-                      (challenge) => _PastChallengeItem(
-                        title: challenge.title,
-                        winner: challenge.winnerName ?? 'TBD',
-                        submissions: challenge.submissionCount,
-                      ),
+                    ...pastChallenges.asMap().entries.map(
+                      (entry) => _PastChallengeItem(
+                        title: entry.value.title,
+                        winner: entry.value.winnerName ?? 'TBD',
+                        submissions: entry.value.submissionCount,
+                      )
+                      .animate()
+                      .fadeIn(duration: 400.ms, delay: (entry.key * 80).ms)
+                      .slideX(begin: -0.1, end: 0, duration: 400.ms, delay: (entry.key * 80).ms),
                     ),
                   ],
                 ],
@@ -110,7 +122,7 @@ class _ChallengeDetailCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppColors.coral.withOpacity(0.3),
+            color: AppColors.coral.withValues(alpha:0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -143,7 +155,7 @@ class _ChallengeDetailCard extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha:0.2),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
@@ -160,7 +172,7 @@ class _ChallengeDetailCard extends StatelessWidget {
           Text(
             description,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha:0.9),
               fontSize: 15,
               height: 1.4,
             ),
@@ -171,7 +183,7 @@ class _ChallengeDetailCard extends StatelessWidget {
               Text(
                 '$submissions submissions',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha:0.8),
                   fontSize: 14,
                 ),
               ),
@@ -215,62 +227,73 @@ class _PastChallengeItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+    return Semantics(
+      button: true,
+      label: '$title challenge. Winner: $winner, $submissions entries',
+      child: Material(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {},
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: const [
+                BoxShadow(
+                  color: AppColors.shadowLight,
+                  blurRadius: 6,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
-            child: const Icon(
-              Icons.emoji_events_rounded,
-              color: Colors.amber,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha:0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.emoji_events_rounded,
+                    color: Colors.amber,
+                    size: 24,
                   ),
                 ),
-                Text(
-                  'Winner: $winner  --  $submissions entries',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                      Text(
+                        'Winner: $winner  \u2022  $submissions entries',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textSecondary,
                 ),
               ],
             ),
           ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.textSecondary,
-          ),
-        ],
+        ),
       ),
     );
   }
