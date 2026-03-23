@@ -1,28 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/app_colors.dart';
+import '../../data/providers.dart';
 
 class ReportButton extends StatelessWidget {
   final String targetType;
   final String targetId;
-  final VoidCallback? onReport;
+  final WidgetRef ref;
 
   const ReportButton({
     super.key,
     required this.targetType,
     required this.targetId,
-    this.onReport,
+    required this.ref,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.flag_outlined, size: 22),
-      tooltip: 'Report',
-      onPressed: () => _showReportSheet(context),
-    );
-  }
-
-  void _showReportSheet(BuildContext context) {
+  static void showReportSheet({
+    required BuildContext context,
+    required WidgetRef ref,
+    required String targetType,
+    required String targetId,
+  }) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -32,7 +30,21 @@ class ReportButton extends StatelessWidget {
       builder: (ctx) => _ReportSheet(
         targetType: targetType,
         targetId: targetId,
-        onReport: onReport,
+        ref: ref,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.flag_outlined, size: 22),
+      tooltip: 'Report',
+      onPressed: () => showReportSheet(
+        context: context,
+        ref: ref,
+        targetType: targetType,
+        targetId: targetId,
       ),
     );
   }
@@ -41,12 +53,12 @@ class ReportButton extends StatelessWidget {
 class _ReportSheet extends StatefulWidget {
   final String targetType;
   final String targetId;
-  final VoidCallback? onReport;
+  final WidgetRef ref;
 
   const _ReportSheet({
     required this.targetType,
     required this.targetId,
-    this.onReport,
+    required this.ref,
   });
 
   @override
@@ -134,12 +146,23 @@ class _ReportSheetState extends State<_ReportSheet> {
             child: ElevatedButton(
               onPressed: _selectedReason == null
                   ? null
-                  : () {
-                      widget.onReport?.call();
+                  : () async {
                       Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Report submitted')),
-                      );
+                      try {
+                        await widget.ref.read(apiClientProvider).report(
+                              targetType: widget.targetType,
+                              targetId: widget.targetId,
+                              reason: _selectedReason!,
+                              details: _detailsController.text.trim().isEmpty
+                                  ? null
+                                  : _detailsController.text.trim(),
+                            );
+                      } catch (_) {}
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Report submitted')),
+                        );
+                      }
                     },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.coral,

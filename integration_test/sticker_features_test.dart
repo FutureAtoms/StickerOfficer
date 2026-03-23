@@ -7,8 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sticker_officer/app.dart';
 import 'package:sticker_officer/core/utils/sticker_guardrails.dart';
 import 'package:sticker_officer/data/providers.dart';
-import 'package:sticker_officer/features/editor/presentation/editor_screen.dart';
-import 'package:sticker_officer/features/editor/presentation/animated_sticker_screen.dart';
 import 'package:sticker_officer/features/editor/presentation/widgets/editor_canvas.dart';
 import 'package:sticker_officer/features/editor/presentation/widgets/editor_toolbar.dart';
 
@@ -50,8 +48,9 @@ void main() {
         child: const StickerOfficerApp(),
       ),
     );
-    // Wait for seed data and initial build
-    await tester.pumpAndSettle(const Duration(seconds: 3));
+    // Use pump with explicit duration instead of pumpAndSettle because the
+    // feed screen has persistent shimmer/animation widgets that never settle.
+    await tester.pump(const Duration(seconds: 2));
   }
 
   // ===========================================================================
@@ -210,9 +209,9 @@ void main() {
       await pumpApp(tester);
 
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.tap(find.text('Animated Sticker'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.text('Animated Sticker'), findsOneWidget);
       expect(find.text('Tap to add pictures!'), findsOneWidget);
@@ -232,13 +231,13 @@ void main() {
       await pumpApp(tester);
 
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.tap(find.text('Animated Sticker'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       // Try to save with 0 frames
       await tester.tap(find.text('Save to Pack'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(
         find.text('Add at least 2 pictures to make it move!'),
@@ -250,13 +249,13 @@ void main() {
       await pumpApp(tester);
 
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.tap(find.text('Animated Sticker'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       // Tap text button in app bar
       await tester.tap(find.byIcon(Icons.text_fields_outlined));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       // Dialog appears with kid-friendly hints
       expect(find.text('Add Text to Your Sticker!'), findsOneWidget);
@@ -272,17 +271,17 @@ void main() {
       await pumpApp(tester);
 
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.tap(find.text('Animated Sticker'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       await tester.tap(find.byIcon(Icons.text_fields_outlined));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       // Type blocked word
       await tester.enterText(find.byType(TextField), 'you are stupid');
       await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       // Should show friendly error, NOT open style sheet
       expect(
@@ -297,15 +296,15 @@ void main() {
       await pumpApp(tester);
 
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.tap(find.text('Animated Sticker'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       await tester.tap(find.byIcon(Icons.text_fields_outlined));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.enterText(find.byType(TextField), 'Bounce test');
       await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       // Style sheet with animation presets
       expect(find.text('Style Your Text!'), findsOneWidget);
@@ -319,15 +318,15 @@ void main() {
       await pumpApp(tester);
 
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.tap(find.text('Animated Sticker'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       await tester.tap(find.byIcon(Icons.text_fields_outlined));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.enterText(find.byType(TextField), 'Fun!');
       await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       // Select Bounce — use pump to avoid animation settle timeout
       await tester.tap(find.text('Bounce'));
@@ -346,16 +345,16 @@ void main() {
       await pumpApp(tester);
 
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.tap(find.text('Animated Sticker'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       // Add text
       await tester.tap(find.byIcon(Icons.text_fields_outlined));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.enterText(find.byType(TextField), 'Remove me');
       await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.tap(find.text('Add to Sticker!'));
       await tester.pump(const Duration(seconds: 1));
 
@@ -363,7 +362,7 @@ void main() {
 
       // Remove via close button
       await tester.tap(find.byIcon(Icons.close));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('"Remove me"'), findsNothing);
     });
@@ -397,7 +396,7 @@ void main() {
       await pumpApp(tester);
 
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Create a Sticker'), findsOneWidget);
       expect(find.text('From Photo'), findsOneWidget);
@@ -419,11 +418,11 @@ void main() {
 
       // Tap Create (+) in bottom nav
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       // Tap "From Video"
       await tester.tap(find.text('From Video'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       // Video to Sticker screen should be visible
       expect(find.text('Video to Sticker'), findsOneWidget);
@@ -435,9 +434,9 @@ void main() {
       await pumpApp(tester);
 
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.tap(find.text('From Video'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       // Guardrail tips
       expect(find.text('Max 5 seconds'), findsOneWidget);
@@ -450,9 +449,9 @@ void main() {
       await pumpApp(tester);
 
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.tap(find.text('From Video'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       expect(
         find.textContaining("we'll turn it into an animated sticker"),
@@ -471,9 +470,9 @@ void main() {
       await pumpApp(tester);
 
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
       await tester.tap(find.text('From Photo'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       // Tap save button
       await tester.tap(find.byIcon(Icons.check_rounded));
@@ -491,7 +490,7 @@ void main() {
       await pumpApp(tester);
 
       await tester.tap(find.text('My Packs'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.text('My Packs'), findsWidgets);
     });

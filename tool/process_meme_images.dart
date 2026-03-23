@@ -3,12 +3,14 @@
 /// background, and distribute into 5 sticker packs of 30 each.
 ///
 /// Run: dart run tool/process_meme_images.dart
+library;
+
 import 'dart:io';
 import 'package:image/image.dart' as img;
 
 void main() {
-  final inputDir = '/tmp/meme_downloads';
-  final outputDir = 'assets/seed_stickers';
+  const inputDir = '/tmp/meme_downloads';
+  const outputDir = 'assets/seed_stickers';
   const size = 512;
 
   // Pack assignments: 30 images each

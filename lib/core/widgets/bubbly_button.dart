@@ -56,15 +56,19 @@ class _BubblyButtonState extends State<BubblyButton>
     final theme = Theme.of(context);
     final buttonColor = widget.color ?? theme.colorScheme.primary;
 
-    return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) {
-        _controller.reverse();
-        HapticFeedback.lightImpact();
-        if (!widget.isLoading) widget.onPressed();
-      },
-      onTapCancel: () => _controller.reverse(),
-      child: AnimatedBuilder(
+    return Semantics(
+      button: true,
+      label: widget.label,
+      enabled: !widget.isLoading,
+      child: GestureDetector(
+        onTapDown: (_) => _controller.forward(),
+        onTapUp: (_) {
+          _controller.reverse();
+          HapticFeedback.lightImpact();
+          if (!widget.isLoading) widget.onPressed();
+        },
+        onTapCancel: () => _controller.reverse(),
+        child: _ScaleBuilder(
         listenable: _scale,
         builder:
             (context, child) =>
@@ -77,7 +81,7 @@ class _BubblyButtonState extends State<BubblyButton>
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: buttonColor.withOpacity(0.3),
+                color: buttonColor.withValues(alpha:0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -105,11 +109,15 @@ class _BubblyButtonState extends State<BubblyButton>
                           ),
                           const SizedBox(width: 10),
                         ],
-                        Text(
-                          widget.label,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: widget.textColor ?? Colors.white,
-                            fontSize: 16,
+                        Flexible(
+                          child: Text(
+                            widget.label,
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: widget.textColor ?? Colors.white,
+                              fontSize: 16,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                       ],
@@ -117,16 +125,16 @@ class _BubblyButtonState extends State<BubblyButton>
           ),
         ),
       ),
+      ),
     );
   }
 }
 
-class AnimatedBuilder extends AnimatedWidget {
+class _ScaleBuilder extends AnimatedWidget {
   final Widget Function(BuildContext, Widget?) builder;
   final Widget? child;
 
-  const AnimatedBuilder({
-    super.key,
+  const _ScaleBuilder({
     required super.listenable,
     required this.builder,
     this.child,

@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sticker_officer/data/providers.dart';
 import 'package:sticker_officer/features/editor/presentation/editor_screen.dart';
 import 'package:sticker_officer/features/editor/presentation/widgets/editor_canvas.dart';
-import 'package:sticker_officer/features/editor/presentation/widgets/editor_toolbar.dart';
 
 /// Comprehensive editor tests covering image cropping flow, text addition
 /// with all styling options, drawing tools, undo, and save/export — filling
@@ -305,8 +304,8 @@ void main() {
   // 5. AI Style Transfer
   // ===========================================================================
 
-  group('AI Style Transfer', () {
-    testWidgets('Style tool opens AI Style Transfer sheet', (tester) async {
+  group('Style Filters', () {
+    testWidgets('Style tool shows error without image', (tester) async {
       await pumpEditor(tester);
       await tester.scrollUntilVisible(
         find.text('Style \u{1F308}'),
@@ -315,24 +314,8 @@ void main() {
       );
       await tester.tap(find.text('Style \u{1F308}'));
       await tester.pumpAndSettle();
-      expect(find.text('AI Style Transfer'), findsOneWidget);
-    });
-
-    testWidgets('all 5 style presets visible', (tester) async {
-      await pumpEditor(tester);
-      await tester.scrollUntilVisible(
-        find.text('Style \u{1F308}'),
-        50,
-        scrollable: find.byType(Scrollable).last,
-      );
-      await tester.tap(find.text('Style \u{1F308}'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Cartoon'), findsOneWidget);
-      expect(find.text('Anime'), findsOneWidget);
-      expect(find.text('Pixel Art'), findsOneWidget);
-      expect(find.text('Watercolor'), findsOneWidget);
-      expect(find.text('Pop Art'), findsOneWidget);
+      // No image loaded — shows snackbar
+      expect(find.text('Load an image first to apply styles'), findsOneWidget);
     });
   });
 

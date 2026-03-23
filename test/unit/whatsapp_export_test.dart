@@ -1,10 +1,13 @@
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:sticker_officer/features/export/data/whatsapp_export_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late WhatsAppExportService service;
 
   setUp(() {
@@ -243,24 +246,25 @@ void main() {
       expect(result.errors, isEmpty);
     });
 
-    test('rejects sticker at 100KB + 1 byte', () {
+    test('accepts sticker at 100KB + 1 byte (auto-compressed during export)', () {
+      // validatePack no longer rejects oversized stickers — export pipeline
+      // auto-compresses them to fit.
       final result = validPack(stickerCount: 3, stickerSize: 100 * 1024 + 1);
 
-      expect(result.isValid, isFalse);
-      expect(result.errors.any((e) => e.contains('exceeds max size')), isTrue);
+      expect(result.isValid, isTrue);
     });
 
-    test('rejects sticker at 200KB', () {
+    test('accepts sticker at 200KB (auto-compressed during export)', () {
       final result = validPack(stickerCount: 3, stickerSize: 200 * 1024);
 
-      expect(result.isValid, isFalse);
+      expect(result.isValid, isTrue);
     });
 
-    test('error message includes sticker index (1-based)', () {
+    test('oversized stickers pass validation (compressed during export)', () {
       final stickers = [
         StickerData(data: Uint8List(1000)),
         StickerData(data: Uint8List(1000)),
-        StickerData(data: Uint8List(200 * 1024)), // third sticker is oversized
+        StickerData(data: Uint8List(200 * 1024)),
       ];
 
       final result = service.validatePack(
@@ -269,11 +273,11 @@ void main() {
         trayIcon: Uint8List(100),
       );
 
-      expect(result.isValid, isFalse);
-      expect(result.errors.any((e) => e.contains('Sticker 3')), isTrue);
+      // No per-sticker size errors — export pipeline handles compression
+      expect(result.isValid, isTrue);
     });
 
-    test('error message includes size in KB', () {
+    test('validation only checks pack-level constraints, not sticker size', () {
       final stickers = [
         StickerData(data: Uint8List(200 * 1024)),
         StickerData(data: Uint8List(1000)),
@@ -286,7 +290,8 @@ void main() {
         trayIcon: Uint8List(100),
       );
 
-      expect(result.errors.any((e) => e.contains('200KB')), isTrue);
+      expect(result.isValid, isTrue);
+      expect(result.errors, isEmpty);
     });
   });
 
@@ -312,13 +317,12 @@ void main() {
       expect(result.errors, isEmpty);
     });
 
-    test('rejects animated sticker at 500KB + 1 byte', () {
+    test('accepts animated sticker at 500KB + 1 byte (auto-compressed during export)', () {
       final result = validPack(
         stickers: makeStickers(3, sizeBytes: 500 * 1024 + 1, isAnimated: true),
       );
 
-      expect(result.isValid, isFalse);
-      expect(result.errors.any((e) => e.contains('exceeds max size')), isTrue);
+      expect(result.isValid, isTrue);
     });
 
     test('accepts animated sticker at 400KB (between static and animated limit)', () {
@@ -329,14 +333,13 @@ void main() {
       expect(result.isValid, isTrue);
     });
 
-    test('rejects static sticker at 200KB even though animated would pass', () {
-      // 200KB > 100KB static limit, but < 500KB animated limit.
-      // Since isAnimated is false, should fail.
+    test('accepts static sticker at 200KB (auto-compressed during export)', () {
+      // No per-sticker size check in validation anymore
       final result = validPack(
         stickers: makeStickers(3, sizeBytes: 200 * 1024, isAnimated: false),
       );
 
-      expect(result.isValid, isFalse);
+      expect(result.isValid, isTrue);
     });
   });
 
@@ -361,11 +364,11 @@ void main() {
       expect(result.isValid, isTrue);
     });
 
-    test('fails when only the static sticker is oversized in a mixed pack', () {
+    test('accepts oversized static sticker in mixed pack (auto-compressed)', () {
       final stickers = [
-        StickerData(data: Uint8List(200 * 1024), isAnimated: false), // TOO BIG
-        StickerData(data: Uint8List(400 * 1024), isAnimated: true), // OK
-        StickerData(data: Uint8List(50 * 1024), isAnimated: false), // OK
+        StickerData(data: Uint8List(200 * 1024), isAnimated: false),
+        StickerData(data: Uint8List(400 * 1024), isAnimated: true),
+        StickerData(data: Uint8List(50 * 1024), isAnimated: false),
       ];
 
       final result = service.validatePack(
@@ -374,16 +377,14 @@ void main() {
         trayIcon: Uint8List(100),
       );
 
-      expect(result.isValid, isFalse);
-      expect(result.errors.length, 1);
-      expect(result.errors.first, contains('Sticker 1'));
+      expect(result.isValid, isTrue);
     });
 
-    test('fails when only the animated sticker is oversized in a mixed pack', () {
+    test('accepts oversized animated sticker in mixed pack (auto-compressed)', () {
       final stickers = [
-        StickerData(data: Uint8List(80 * 1024), isAnimated: false), // OK
-        StickerData(data: Uint8List(600 * 1024), isAnimated: true), // TOO BIG
-        StickerData(data: Uint8List(50 * 1024), isAnimated: false), // OK
+        StickerData(data: Uint8List(80 * 1024), isAnimated: false),
+        StickerData(data: Uint8List(600 * 1024), isAnimated: true),
+        StickerData(data: Uint8List(50 * 1024), isAnimated: false),
       ];
 
       final result = service.validatePack(
@@ -392,9 +393,7 @@ void main() {
         trayIcon: Uint8List(100),
       );
 
-      expect(result.isValid, isFalse);
-      expect(result.errors.length, 1);
-      expect(result.errors.first, contains('Sticker 2'));
+      expect(result.isValid, isTrue);
     });
   });
 
@@ -453,11 +452,11 @@ void main() {
       expect(result.errors, contains('Tray icon is required'));
     });
 
-    test('reports oversized errors for multiple stickers', () {
+    test('oversized stickers no longer cause validation errors', () {
       final stickers = [
-        StickerData(data: Uint8List(200 * 1024)), // oversized
-        StickerData(data: Uint8List(300 * 1024)), // oversized
-        StickerData(data: Uint8List(50 * 1024)), // OK
+        StickerData(data: Uint8List(200 * 1024)),
+        StickerData(data: Uint8List(300 * 1024)),
+        StickerData(data: Uint8List(50 * 1024)),
       ];
 
       final result = service.validatePack(
@@ -466,13 +465,11 @@ void main() {
         trayIcon: Uint8List(100),
       );
 
-      expect(result.isValid, isFalse);
-      expect(result.errors.length, 2);
-      expect(result.errors.any((e) => e.contains('Sticker 1')), isTrue);
-      expect(result.errors.any((e) => e.contains('Sticker 2')), isTrue);
+      // No per-sticker size errors — auto-compressed during export
+      expect(result.isValid, isTrue);
     });
 
-    test('collects empty name, missing tray, AND oversized sticker errors together', () {
+    test('collects empty name and missing tray errors (but not sticker size)', () {
       final stickers = [
         StickerData(data: Uint8List(200 * 1024)),
         StickerData(data: Uint8List(200 * 1024)),
@@ -486,11 +483,10 @@ void main() {
       );
 
       expect(result.isValid, isFalse);
-      // Should contain: name error, tray icon error, 3 sticker size errors
-      expect(result.errors.length, 5);
+      // Only pack-level errors: name + tray icon (no sticker size errors)
+      expect(result.errors.length, 2);
       expect(result.errors, contains('Pack name is required'));
       expect(result.errors, contains('Tray icon is required'));
-      expect(result.errors.where((e) => e.contains('exceeds max size')).length, 3);
     });
   });
 
@@ -697,7 +693,7 @@ void main() {
 
       // In test env, getTemporaryDirectory() throws MissingPluginException
       expect(result.success, isFalse);
-      expect(result.message, contains('Failed to share'));
+      expect(result.message, contains('Export failed'));
     });
 
     test('validates before exporting — rejects empty pack name', () async {
@@ -736,7 +732,9 @@ void main() {
       expect(result.message, contains('at most 30'));
     });
 
-    test('validates before exporting — rejects oversized sticker', () async {
+    test('oversized stickers pass validation (auto-compressed during export)', () async {
+      // Oversized stickers are no longer rejected at validation — they're
+      // auto-compressed by the export pipeline.
       final result = await service.exportToWhatsApp(
         packName: 'Test Pack',
         packAuthor: 'Author',
@@ -744,8 +742,9 @@ void main() {
         trayIcon: Uint8List(100),
       );
 
+      // Passes validation but fails on platform API in test env
       expect(result.success, isFalse);
-      expect(result.message, contains('exceeds max size'));
+      expect(result.message, isNot(contains('exceeds max size')));
     });
 
     test('returns only the first error message on failure', () async {
@@ -771,7 +770,7 @@ void main() {
 
       // Passes validation but fails on platform API in test env
       expect(result.success, isFalse);
-      expect(result.message, contains('Failed to share'));
+      expect(result.message, contains('Export failed'));
     });
 
     test('valid max pack fails gracefully in test env (no platform)', () async {
@@ -783,7 +782,7 @@ void main() {
       );
 
       expect(result.success, isFalse);
-      expect(result.message, contains('Failed to share'));
+      expect(result.message, contains('Export failed'));
     });
 
     test('valid pack with small tray icon fails gracefully in test env',
@@ -796,7 +795,7 @@ void main() {
       );
 
       expect(result.success, isFalse);
-      expect(result.message, contains('Failed to share'));
+      expect(result.message, contains('Export failed'));
     });
 
     test('packAuthor does not affect validation — fails on platform in test',
@@ -810,7 +809,7 @@ void main() {
 
       // Passes validation (empty author is fine), fails on platform
       expect(result.success, isFalse);
-      expect(result.message, contains('Failed to share'));
+      expect(result.message, contains('Export failed'));
     });
   });
 
@@ -851,20 +850,22 @@ void main() {
       expect(result.errors, isEmpty);
     });
 
-    test('2 stickers at 100KB + 1 byte each — both count and size fail', () {
+    test('2 oversized stickers — only count fails (size auto-compressed)', () {
       final result = validPack(stickerCount: 2, stickerSize: 100 * 1024 + 1);
 
       expect(result.isValid, isFalse);
       expect(result.errors.any((e) => e.contains('at least 3')), isTrue);
-      expect(result.errors.any((e) => e.contains('exceeds max size')), isTrue);
+      // No size error — auto-compressed during export
+      expect(result.errors.any((e) => e.contains('exceeds max size')), isFalse);
     });
 
-    test('31 stickers at 100KB + 1 byte each — both count and size fail', () {
+    test('31 oversized stickers — only count fails (size auto-compressed)', () {
       final result = validPack(stickerCount: 31, stickerSize: 100 * 1024 + 1);
 
       expect(result.isValid, isFalse);
       expect(result.errors.any((e) => e.contains('at most 30')), isTrue);
-      expect(result.errors.any((e) => e.contains('exceeds max size')), isTrue);
+      // No size error — auto-compressed during export
+      expect(result.errors.any((e) => e.contains('exceeds max size')), isFalse);
     });
   });
 }

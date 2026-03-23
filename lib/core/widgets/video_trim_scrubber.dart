@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -39,9 +38,9 @@ class _VideoTrimScrubberState extends State<VideoTrimScrubber> {
   @override
   Widget build(BuildContext context) {
     if (widget.thumbnails.isEmpty) {
-      return SizedBox(
+      return const SizedBox(
         height: _thumbHeight + 24,
-        child: const Center(child: CircularProgressIndicator()),
+        child: Center(child: CircularProgressIndicator()),
       );
     }
 

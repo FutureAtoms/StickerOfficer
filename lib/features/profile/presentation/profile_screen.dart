@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/report_button.dart';
 import '../../../data/providers.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -9,25 +14,16 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(userStatsProvider);
+    final publicIdAsync = ref.watch(publicIdProvider);
 
-    // Extract stats values, falling back to zeros while loading
     final stats = statsAsync.when(
       data: (s) => s,
-      loading:
-          () => const UserStats(
-            packCount: 0,
-            totalStickers: 0,
-            totalLikes: 0,
-            totalDownloads: 0,
-          ),
-      error:
-          (_, __) => const UserStats(
-            packCount: 0,
-            totalStickers: 0,
-            totalLikes: 0,
-            totalDownloads: 0,
-          ),
+      loading: () => const UserStats(
+          packCount: 0, totalStickers: 0, totalLikes: 0, totalDownloads: 0),
+      error: (_, __) => const UserStats(
+          packCount: 0, totalStickers: 0, totalLikes: 0, totalDownloads: 0),
     );
+    final publicId = publicIdAsync.valueOrNull;
 
     return Scaffold(
       body: SafeArea(
@@ -37,38 +33,58 @@ class ProfileScreen extends ConsumerWidget {
             children: [
               const SizedBox(height: 16),
               // Avatar
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.coral.withOpacity(0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+              Semantics(
+                label: 'Profile avatar',
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.coral.withValues(alpha: 0.3),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.person_rounded,
+                      size: 48, color: Colors.white),
                 ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  size: 48,
-                  color: Colors.white,
-                ),
-              ),
+              )
+                  .animate()
+                  .fadeIn(duration: 600.ms)
+                  .scale(
+                      begin: const Offset(0.8, 0.8),
+                      end: const Offset(1, 1),
+                      duration: 600.ms,
+                      curve: Curves.easeOutBack),
               const SizedBox(height: 16),
-              Text(
-                'Sticker Creator',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
+              Text('Sticker Creator',
+                  style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 4),
-              Text(
-                '@stickermaker',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
+              if (publicId != null)
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: publicId));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: const Text('ID copied to clipboard'),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ));
+                  },
+                  child: Text('@$publicId',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary)),
+                )
+              else
+                Text('@stickermaker',
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: AppColors.textSecondary)),
               const SizedBox(height: 24),
               // Stats
               Row(
@@ -89,76 +105,93 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              // Edit profile button
-              OutlinedButton(
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.coral),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  minimumSize: const Size(200, 44),
-                ),
-                child: const Text('Edit Profile'),
-              ),
               const SizedBox(height: 32),
               // Settings section
               _SettingsSection(
                 items: [
                   _SettingsItem(
-                    icon: Icons.star_rounded,
-                    label: 'Premium',
-                    color: Colors.amber,
-                    trailing: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'Upgrade',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.notifications_rounded,
-                    label: 'Notifications',
-                    color: AppColors.teal,
-                  ),
-                  _SettingsItem(
-                    icon: Icons.palette_rounded,
-                    label: 'Appearance',
-                    color: AppColors.purple,
-                  ),
-                  _SettingsItem(
                     icon: Icons.privacy_tip_rounded,
-                    label: 'Privacy',
+                    label: 'Privacy Policy',
                     color: Colors.blue,
+                    onTap: () => launchUrl(Uri.parse(
+                        'https://sticker-officer-api.ceofutureatoms.workers.dev/legal/privacy')),
+                  ),
+                  _SettingsItem(
+                    icon: Icons.description_rounded,
+                    label: 'Terms of Service',
+                    color: AppColors.purple,
+                    onTap: () => launchUrl(Uri.parse(
+                        'https://sticker-officer-api.ceofutureatoms.workers.dev/legal/terms')),
                   ),
                   _SettingsItem(
                     icon: Icons.help_rounded,
-                    label: 'Help & Support',
+                    label: 'Contact Support',
                     color: Colors.orange,
+                    onTap: () => launchUrl(
+                        Uri.parse('mailto:support@futureatoms.com')),
                   ),
                   _SettingsItem(
                     icon: Icons.info_rounded,
-                    label: 'About',
+                    label: 'About StickerOfficer',
                     color: AppColors.textSecondary,
+                    onTap: () {
+                      showAboutDialog(
+                        context: context,
+                        applicationName: 'StickerOfficer',
+                        applicationVersion: '1.0.0',
+                        applicationLegalese:
+                            '© 2026 Future Atoms. All rights reserved.',
+                      );
+                    },
+                  ),
+                  _SettingsItem(
+                    icon: Icons.flag_rounded,
+                    label: 'Report an Issue',
+                    color: AppColors.coral,
+                    onTap: () => ReportButton.showReportSheet(
+                      context: context,
+                      ref: ref,
+                      targetType: 'app',
+                      targetId: publicId ?? 'unknown',
+                    ),
                   ),
                 ],
-              ),
+              )
+              .animate()
+              .fadeIn(duration: 500.ms, delay: 300.ms)
+              .slideY(begin: 0.15, end: 0, duration: 500.ms, delay: 300.ms),
               const SizedBox(height: 16),
               TextButton(
-                onPressed: () {},
+                onPressed: () async {
+                  final shouldSignOut = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      title: const Text('Sign Out'),
+                      content: const Text(
+                        'Are you sure you want to sign out?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: const Text(
+                            'Sign Out',
+                            style: TextStyle(color: AppColors.coral),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (shouldSignOut == true && context.mounted) {
+                    context.go('/onboarding');
+                  }
+                },
                 child: const Text(
                   'Sign Out',
                   style: TextStyle(color: AppColors.coral),
@@ -189,18 +222,38 @@ class _ProfileStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-        ),
-      ],
+    // Try to parse as number for animated counting
+    final numericValue = int.tryParse(value.replaceAll(RegExp(r'[^0-9]'), ''));
+    final suffix = value.replaceAll(RegExp(r'[0-9]'), ''); // e.g. 'k'
+
+    return Semantics(
+      label: '$value $label',
+      child: Column(
+        children: [
+          if (numericValue != null)
+            TweenAnimationBuilder<int>(
+              tween: IntTween(begin: 0, end: numericValue),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (context, animatedValue, _) {
+                return Text(
+                  '$animatedValue$suffix',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                );
+              },
+            )
+          else
+            Text(
+              value,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -235,7 +288,7 @@ class _SettingsSection extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: item.color.withOpacity(0.1),
+                        color: item.color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(item.icon, color: item.color, size: 22),
@@ -244,13 +297,11 @@ class _SettingsSection extends StatelessWidget {
                       item.label,
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
-                    trailing:
-                        item.trailing ??
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: AppColors.textSecondary,
-                        ),
-                    onTap: () {},
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textSecondary,
+                    ),
+                    onTap: item.onTap,
                   ),
                   if (!isLast)
                     Divider(height: 1, indent: 72, color: Colors.grey.shade200),
@@ -266,12 +317,12 @@ class _SettingsItem {
   final IconData icon;
   final String label;
   final Color color;
-  final Widget? trailing;
+  final VoidCallback? onTap;
 
   const _SettingsItem({
     required this.icon,
     required this.label,
     required this.color,
-    this.trailing,
+    this.onTap,
   });
 }

@@ -3,8 +3,9 @@
 /// as 512x512 PNG files with transparent backgrounds.
 ///
 /// Run: dart run tool/generate_meme_stickers.dart
+library;
+
 import 'dart:io';
-import 'dart:math';
 import 'package:image/image.dart' as img;
 
 // ---------------------------------------------------------------------------
@@ -40,7 +41,7 @@ class MemeSticker {
 }
 
 // Pack 1: Brainrot / Internet Slang (2025-2026 viral)
-final brainrotPack = MemePack(
+const brainrotPack = MemePack(
   prefix: 'brainrot_memes',
   name: 'Brainrot Memes',
   stickers: [
@@ -78,7 +79,7 @@ final brainrotPack = MemePack(
 );
 
 // Pack 2: Reaction Memes
-final reactionPack = MemePack(
+const reactionPack = MemePack(
   prefix: 'reaction_memes',
   name: 'Reaction Memes',
   stickers: [
@@ -116,7 +117,7 @@ final reactionPack = MemePack(
 );
 
 // Pack 3: AI & Tech Memes (2025-2026 specific)
-final aiTechPack = MemePack(
+const aiTechPack = MemePack(
   prefix: 'ai_tech_memes',
   name: 'AI & Tech Memes',
   stickers: [
@@ -154,7 +155,7 @@ final aiTechPack = MemePack(
 );
 
 // Pack 4: Wholesome / Positive Vibes
-final wholesomePack = MemePack(
+const wholesomePack = MemePack(
   prefix: 'wholesome_memes',
   name: 'Wholesome Vibes',
   stickers: [
@@ -192,7 +193,7 @@ final wholesomePack = MemePack(
 );
 
 // Pack 5: Daily Life / Relatable
-final dailyLifePack = MemePack(
+const dailyLifePack = MemePack(
   prefix: 'daily_life_memes',
   name: 'Daily Life',
   stickers: [
@@ -281,7 +282,7 @@ img.Image generateSticker(MemeSticker sticker) {
       // Bubble tail
       for (int i = 0; i < 80; i++) {
         final x = 120 + i;
-        final y1t = 400;
+        const y1t = 400;
         final y2t = 400 + (i * 1.2).toInt();
         if (y2t < 500) {
           img.drawLine(canvas, x1: x, y1: y1t, x2: x, y2: y2t, color: bgCol);
@@ -295,7 +296,7 @@ img.Image generateSticker(MemeSticker sticker) {
       // Triangle bottom
       for (int y = 200; y < 440; y++) {
         final halfWidth = ((440 - y) * 240 / 240).toInt();
-        final cx = 256;
+        const cx = 256;
         img.drawLine(canvas,
             x1: cx - halfWidth, y1: y,
             x2: cx + halfWidth, y2: y,
@@ -318,7 +319,7 @@ img.Image generateSticker(MemeSticker sticker) {
   // Draw text
   final lines = sticker.text.split('\n');
   final font = img.arial48;
-  final lineHeight = 52;
+  const lineHeight = 52;
   final totalTextHeight = lines.length * lineHeight;
   var startY = (size - totalTextHeight) ~/ 2;
 
@@ -346,7 +347,7 @@ img.Image generateSticker(MemeSticker sticker) {
 }
 
 void main() {
-  final outputDir = 'assets/seed_stickers';
+  const outputDir = 'assets/seed_stickers';
 
   final packs = [
     brainrotPack,

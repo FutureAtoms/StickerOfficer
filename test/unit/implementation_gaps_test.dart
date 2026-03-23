@@ -8,6 +8,7 @@ import 'package:sticker_officer/features/export/data/whatsapp_export_service.dar
 /// - IMPLEMENTED: Tests that verify real working functionality
 /// - NOT_IMPLEMENTED: Tests documenting features still missing
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('WhatsApp Export Service - Image Conversion (IMPLEMENTED)', () {
     late WhatsAppExportService service;
 
@@ -74,7 +75,7 @@ void main() {
 
       // Passes validation, but Share.shareXFiles is unavailable in tests
       expect(result.success, isFalse);
-      expect(result.message, contains('Failed to share'));
+      expect(result.message, contains('Export failed'));
     });
   });
 

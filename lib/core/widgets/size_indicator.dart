@@ -54,27 +54,32 @@ class StickerSizeIndicator extends StatelessWidget {
       label = 'Too large for WhatsApp';
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            '$label (${sizeKB.toStringAsFixed(0)} KB)',
-            style: TextStyle(
-              color: dotColor,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-            overflow: TextOverflow.ellipsis,
+    final statusText = '$label (${sizeKB.toStringAsFixed(0)} KB)';
+
+    return Semantics(
+      label: 'Sticker size: $statusText',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
           ),
-        ),
-      ],
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              statusText,
+              style: TextStyle(
+                color: dotColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

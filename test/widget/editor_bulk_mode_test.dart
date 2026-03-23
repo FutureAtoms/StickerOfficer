@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:sticker_officer/features/editor/presentation/editor_screen.dart';
 
 void main() {
   group('EditorScreen bulkMode', () {
     testWidgets('bulkMode=true shows Save & Next tooltip', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(
             // bulkMode=true + imagePath=null does NOT auto-open picker
-            home: const EditorScreen(bulkMode: true),
+            home: EditorScreen(bulkMode: true),
           ),
         ),
       );
@@ -24,12 +23,12 @@ void main() {
 
     testWidgets('bulkMode=false shows Save Sticker tooltip', (tester) async {
       await tester.pumpWidget(
-        ProviderScope(
+        const ProviderScope(
           child: MaterialApp(
             // bulkMode=false + imagePath=null would auto-open picker,
             // but pumpAndSettle catches the MissingPluginException.
             // Instead, test with a non-existent path to avoid picker.
-            home: const EditorScreen(bulkMode: false),
+            home: EditorScreen(bulkMode: false),
           ),
         ),
       );
@@ -89,13 +88,10 @@ void main() {
   group('Router extra handling', () {
     test('String extra is treated as imagePath', () {
       const extra = '/path/to/image.png';
-      String? imagePath;
       String? packId;
       bool bulkMode = false;
 
-      if (extra is String) {
-        imagePath = extra;
-      }
+      const imagePath = extra;
 
       expect(imagePath, '/path/to/image.png');
       expect(packId, isNull);
@@ -163,6 +159,7 @@ void main() {
         bulkMode = extra['bulkMode'] as bool? ?? false;
       }
 
+      expect(imagePath, isNull);
       expect(packId, 'pack-789');
       expect(bulkMode, false);
     });

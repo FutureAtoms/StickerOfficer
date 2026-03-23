@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -119,7 +118,7 @@ void main() {
   // ===========================================================================
 
   group('GIF import logic', () {
-    Uint8List _makeTestGif(int frameCount) {
+    Uint8List makeTestGif(int frameCount) {
       final first = img.Image(width: 32, height: 32);
       img.fill(first, color: img.ColorRgba8(255, 0, 0, 255));
       first.frameDuration = 10;
@@ -135,21 +134,21 @@ void main() {
     }
 
     test('decodes a 2-frame GIF correctly', () {
-      final gifBytes = _makeTestGif(2);
+      final gifBytes = makeTestGif(2);
       final decoded = img.decodeGif(gifBytes);
       expect(decoded, isNotNull);
       expect(decoded!.numFrames, 2);
     });
 
     test('decodes an 8-frame GIF correctly', () {
-      final gifBytes = _makeTestGif(8);
+      final gifBytes = makeTestGif(8);
       final decoded = img.decodeGif(gifBytes);
       expect(decoded, isNotNull);
       expect(decoded!.numFrames, 8);
     });
 
     test('individual frames can be extracted as PNG', () {
-      final gifBytes = _makeTestGif(3);
+      final gifBytes = makeTestGif(3);
       final decoded = img.decodeGif(gifBytes)!;
 
       for (var i = 0; i < decoded.numFrames; i++) {
@@ -165,7 +164,7 @@ void main() {
     });
 
     test('frame extraction respects max frame limit', () {
-      final gifBytes = _makeTestGif(5);
+      final gifBytes = makeTestGif(5);
       final decoded = img.decodeGif(gifBytes)!;
       const remaining = 3; // pretend 5 out of 8 slots used
       final framesToTake = decoded.numFrames.clamp(0, remaining);
@@ -173,7 +172,7 @@ void main() {
     });
 
     test('frame extraction with 0 remaining yields 0', () {
-      final gifBytes = _makeTestGif(5);
+      final gifBytes = makeTestGif(5);
       final decoded = img.decodeGif(gifBytes)!;
       const remaining = 0;
       final framesToTake = decoded.numFrames.clamp(0, remaining);
@@ -196,7 +195,7 @@ void main() {
     });
 
     test('single-frame GIF decodes with numFrames = 1', () {
-      final gifBytes = _makeTestGif(1);
+      final gifBytes = makeTestGif(1);
       final decoded = img.decodeGif(gifBytes);
       expect(decoded, isNotNull);
       // A 1-frame "animation" still has 1 frame
@@ -204,7 +203,7 @@ void main() {
     });
 
     test('frames resize to 512x512 correctly', () {
-      final gifBytes = _makeTestGif(2);
+      final gifBytes = makeTestGif(2);
       final decoded = img.decodeGif(gifBytes)!;
       final frame = decoded.getFrame(0);
       expect(frame.width, 32); // original is 32x32

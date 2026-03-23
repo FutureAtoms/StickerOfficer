@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,7 +12,6 @@ import 'package:sticker_officer/app.dart';
 import 'package:sticker_officer/core/utils/sticker_guardrails.dart';
 import 'package:sticker_officer/data/providers.dart';
 import 'package:sticker_officer/features/editor/presentation/animated_sticker_screen.dart';
-import 'package:sticker_officer/features/editor/presentation/video_to_sticker_screen.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();

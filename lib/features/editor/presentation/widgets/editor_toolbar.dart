@@ -121,33 +121,52 @@ class _ToolButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Strip emoji for accessibility label
+    final accessibleLabel =
+        label
+            .replaceAll(RegExp(r'[\u{1F000}-\u{1FFFF}]', unicode: true), '')
+            .trim();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 64,
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
-            border: isSelected ? Border.all(color: color, width: 2) : null,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color, size: 26),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                ),
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: '$accessibleLabel tool${isSelected ? ", selected" : ""}',
+        child: Tooltip(
+          message: accessibleLabel,
+          child: GestureDetector(
+            onTap: onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 68,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              decoration: BoxDecoration(
+                color:
+                    isSelected
+                        ? color.withValues(alpha: 0.15)
+                        : Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+                border: isSelected ? Border.all(color: color, width: 2) : null,
               ),
-            ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: color, size: 26),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 10,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

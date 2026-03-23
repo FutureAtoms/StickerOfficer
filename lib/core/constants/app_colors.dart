@@ -12,7 +12,11 @@ abstract class AppColors {
 
   // Secondary
   static const teal = Color(0xFF06D6A0);
+
+  // Semantic colors
   static const success = Color(0xFF22C55E);
+  static const warning = Color(0xFFFBBF24);
+  static const error = Color(0xFFEF4444);
 
   // WhatsApp green
   static const whatsappGreen = Color(0xFF25D366);

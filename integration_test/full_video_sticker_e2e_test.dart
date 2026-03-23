@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,7 +8,6 @@ import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sticker_officer/core/constants/app_colors.dart';
 import 'package:sticker_officer/core/utils/sticker_guardrails.dart';
 import 'package:sticker_officer/data/providers.dart';
 import 'package:sticker_officer/features/editor/presentation/animated_sticker_screen.dart';
@@ -27,7 +25,7 @@ import 'package:sticker_officer/features/editor/presentation/video_to_sticker_sc
 /// 7. Save to pack
 /// 8. Guardrails verification
 void main() {
-  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   late SharedPreferences prefs;
 

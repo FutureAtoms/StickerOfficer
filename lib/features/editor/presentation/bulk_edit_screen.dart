@@ -258,10 +258,11 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
+        final navigator = Navigator.of(context);
         final shouldPop = await _onWillPop();
         if (shouldPop && mounted) {
           ref.read(packsProvider.notifier).refresh();
-          Navigator.of(context).maybePop();
+          navigator.maybePop();
         }
       },
       child: Scaffold(
@@ -271,10 +272,11 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
             icon: const Icon(Icons.close_rounded),
             tooltip: 'Close',
             onPressed: () async {
+              final navigator = Navigator.of(context);
               final shouldPop = await _onWillPop();
               if (shouldPop && mounted) {
                 ref.read(packsProvider.notifier).refresh();
-                Navigator.of(context).maybePop();
+                navigator.maybePop();
               }
             },
           ),

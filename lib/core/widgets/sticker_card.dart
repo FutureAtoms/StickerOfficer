@@ -21,10 +21,14 @@ class StickerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: AnimatedContainer(
+    return Semantics(
+      button: onTap != null,
+      label: label ?? 'Sticker',
+      selected: isSelected,
+      child: GestureDetector(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
@@ -68,6 +72,7 @@ class StickerCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }

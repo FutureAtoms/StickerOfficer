@@ -56,7 +56,28 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
         </activity>
+        <!-- WhatsApp Sticker Content Provider -->
+        <provider
+            android:name=".StickerContentProvider"
+            android:authorities="com.futureatoms.sticker_officer.stickercontentprovider"
+            android:enabled="true"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:readPermission="com.whatsapp.sticker.READ" />
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
@@ -73,5 +94,8 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- WhatsApp package visibility for sticker integration -->
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
     </queries>
 </manifest>

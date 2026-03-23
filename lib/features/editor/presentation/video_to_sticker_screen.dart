@@ -226,10 +226,7 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
 
     // Check available storage before conversion
     try {
-      final tempDir = await getTemporaryDirectory();
-      final stat = await tempDir.stat();
-      // stat doesn't give free space; use a rough check via FileStat
-      // Just ensure temp dir is accessible
+      await getTemporaryDirectory();
     } catch (_) {
       _showSnackBar('Storage error — free up some space!', AppColors.coral);
       return;

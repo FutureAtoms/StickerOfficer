@@ -391,48 +391,58 @@ class _ChallengesTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final challenges = ref.watch(challengesProvider);
+    final challengesAsync = ref.watch(challengesProvider);
 
-    if (challenges.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.emoji_events_rounded,
-              size: 64,
-              color: AppColors.textSecondary.withValues(alpha:0.3),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No challenges yet',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      );
-    }
+    return challengesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, __) => _emptyState(context),
+      data: (challenges) {
+        if (challenges.isEmpty) return _emptyState(context);
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: challenges.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
-      itemBuilder: (context, index) {
-        final challenge = challenges[index];
-        final color = challenge.isActive ? AppColors.coral : AppColors.purple;
-        final daysLeft = challenge.endDate.difference(DateTime.now()).inDays;
-
-        return _ChallengeCard(
-          title: challenge.title,
-          description: challenge.description,
-          daysLeft: daysLeft.clamp(0, 999),
-          submissions: challenge.submissionCount,
-          color: color,
-          isActive: challenge.isActive,
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: challenges.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 16),
+          itemBuilder: (context, index) {
+            final challenge = challenges[index];
+            final color =
+                challenge.isActive ? AppColors.coral : AppColors.purple;
+            final daysLeft =
+                challenge.endDate.difference(DateTime.now()).inDays;
+            return _ChallengeCard(
+              title: challenge.title,
+              description: challenge.description,
+              daysLeft: daysLeft.clamp(0, 999),
+              submissions: challenge.submissionCount,
+              color: color,
+              isActive: challenge.isActive,
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _emptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.emoji_events_rounded,
+            size: 64,
+            color: AppColors.textSecondary.withValues(alpha: 0.3),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No challenges yet',
+            style: Theme.of(context)
+                .textTheme
+                .bodyLarge
+                ?.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
     );
   }
 }

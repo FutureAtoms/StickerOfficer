@@ -1,18 +1,14 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:sticker_officer/core/services/image_picker_service.dart';
 import 'package:sticker_officer/core/utils/sticker_guardrails.dart';
 import 'package:sticker_officer/data/models/sticker_pack.dart';
-import 'package:sticker_officer/data/providers.dart';
 import 'package:sticker_officer/data/repositories/pack_repository.dart';
 import 'package:sticker_officer/features/editor/domain/bulk_edit_queue.dart';
 
@@ -39,7 +35,7 @@ void main() {
     test('capacity enforcement truncates to available slots', () {
       const maxPerPack = StickerGuardrails.maxStickersPerPack; // 30
       const existingCount = 28;
-      final available = maxPerPack - existingCount; // 2
+      const available = maxPerPack - existingCount; // 2
 
       final pickedPaths = List.generate(5, (i) => '/img_$i.png');
 
@@ -117,7 +113,7 @@ void main() {
         trayIconPath: null,
       );
 
-      final stickerPath = '/stickers/test-pack/sticker_1.png';
+      const stickerPath = '/stickers/test-pack/sticker_1.png';
       final updated = pack.copyWith(
         stickerPaths: [...pack.stickerPaths, stickerPath],
         trayIconPath: pack.trayIconPath ?? stickerPath,
@@ -136,7 +132,7 @@ void main() {
         trayIconPath: '/existing_tray.png',
       );
 
-      final stickerPath = '/stickers/test-pack/sticker_1.png';
+      const stickerPath = '/stickers/test-pack/sticker_1.png';
       final updated = pack.copyWith(
         stickerPaths: [...pack.stickerPaths, stickerPath],
         trayIconPath: pack.trayIconPath ?? stickerPath,

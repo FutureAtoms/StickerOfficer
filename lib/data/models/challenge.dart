@@ -57,15 +57,21 @@ class Challenge {
   }
 
   factory Challenge.fromJson(Map<String, dynamic> json) {
+    // Supports both camelCase (local) and snake_case (Worker API) field names.
+    final startRaw = (json['starts_at'] ?? json['startDate']) as String?;
+    final endRaw = (json['ends_at'] ?? json['endDate']) as String?;
     return Challenge(
       id: json['id'] as String,
       title: json['title'] as String,
       description: json['description'] as String,
       status: json['status'] as String,
-      startDate: DateTime.parse(json['startDate'] as String),
-      endDate: DateTime.parse(json['endDate'] as String),
-      submissionCount: json['submissionCount'] as int? ?? 0,
-      winnerName: json['winnerName'] as String?,
+      startDate: startRaw != null ? DateTime.parse(startRaw) : DateTime.now(),
+      endDate: endRaw != null
+          ? DateTime.parse(endRaw)
+          : DateTime.now().add(const Duration(days: 7)),
+      submissionCount:
+          (json['submission_count'] ?? json['submissionCount']) as int? ?? 0,
+      winnerName: (json['winner_name'] ?? json['winnerName']) as String?,
     );
   }
 

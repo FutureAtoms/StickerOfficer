@@ -327,50 +327,20 @@ final searchResultsProvider = Provider<AsyncValue<List<StickerPack>>>((ref) {
 });
 
 // =============================================================================
-// Challenges – hardcoded sample data for now
+// Challenges – live from Cloudflare Worker API
 // =============================================================================
 
-final challengesProvider = Provider<List<Challenge>>((ref) {
-  final now = DateTime.now();
-  return [
-    Challenge(
-      id: 'challenge-1',
-      title: 'Funny Animals',
-      description: 'Create the funniest animal stickers!',
-      status: 'active',
-      startDate: now.subtract(const Duration(days: 4)),
-      endDate: now.add(const Duration(days: 3)),
-      submissionCount: 142,
-    ),
-    Challenge(
-      id: 'challenge-2',
-      title: 'Reaction Stickers',
-      description: 'Express every emotion with creative reaction stickers.',
-      status: 'voting',
-      startDate: now.subtract(const Duration(days: 10)),
-      endDate: now.subtract(const Duration(days: 1)),
-      submissionCount: 89,
-    ),
-    Challenge(
-      id: 'challenge-3',
-      title: 'Meme Legends',
-      description: 'Turn classic memes into sticker packs.',
-      status: 'completed',
-      startDate: now.subtract(const Duration(days: 30)),
-      endDate: now.subtract(const Duration(days: 14)),
-      submissionCount: 217,
-      winnerName: 'StickerMaster42',
-    ),
-    Challenge(
-      id: 'challenge-4',
-      title: 'Holiday Vibes',
-      description: 'Design festive stickers for any holiday!',
-      status: 'active',
-      startDate: now.subtract(const Duration(days: 2)),
-      endDate: now.add(const Duration(days: 5)),
-      submissionCount: 38,
-    ),
-  ];
+final challengesProvider = FutureProvider<List<Challenge>>((ref) async {
+  try {
+    final client = ref.read(apiClientProvider);
+    final data = await client.getChallenges();
+    final list = (data['challenges'] as List<dynamic>?) ?? [];
+    return list
+        .map((e) => Challenge.fromJson(e as Map<String, dynamic>))
+        .toList();
+  } catch (_) {
+    return [];
+  }
 });
 
 // =============================================================================
@@ -435,4 +405,11 @@ final authServiceProvider = Provider<AuthService>((ref) {
 final apiClientProvider = Provider<ApiClient>((ref) {
   final auth = ref.read(authServiceProvider);
   return ApiClient(baseUrl: _apiBaseUrl, authService: auth);
+});
+
+/// Resolves the current device's public_id by ensuring auth registration.
+final publicIdProvider = FutureProvider<String?>((ref) async {
+  final auth = ref.read(authServiceProvider);
+  await auth.ensureRegistered();
+  return auth.publicId;
 });

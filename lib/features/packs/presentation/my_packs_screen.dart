@@ -1,12 +1,16 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/shimmer_skeleton.dart';
 import '../../../core/widgets/whatsapp_button.dart';
 import '../../../data/models/sticker_pack.dart';
 import '../../../data/providers.dart';
+import '../../export/data/whatsapp_export_service.dart';
 
 class MyPacksScreen extends ConsumerWidget {
   const MyPacksScreen({super.key});
@@ -71,7 +75,7 @@ class _PacksList extends ConsumerWidget {
     final packsAsync = ref.watch(packsProvider);
 
     return packsAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const ShimmerSkeleton(itemCount: 4, layout: ShimmerLayout.list),
       error:
           (error, _) => Center(
             child: Column(
@@ -80,7 +84,7 @@ class _PacksList extends ConsumerWidget {
                 Icon(
                   Icons.error_outline_rounded,
                   size: 48,
-                  color: AppColors.coral.withOpacity(0.5),
+                  color: AppColors.coral.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -89,19 +93,43 @@ class _PacksList extends ConsumerWidget {
                     color: AppColors.textSecondary,
                   ),
                 ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => ref.invalidate(packsProvider),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text('Retry'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.coral,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
       data: (packs) {
-        return ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          children: [
-            if (packs.isNotEmpty)
-              ...packs.map((pack) => _PackListItem(pack: pack)),
-            const SizedBox(height: 16),
-            // Empty state CTA (always visible as a prompt to create more)
-            _CreatePackCta(isEmpty: packs.isEmpty),
-          ],
+        return RefreshIndicator(
+          color: AppColors.coral,
+          onRefresh: () async {
+            ref.invalidate(packsProvider);
+            await ref.read(packsProvider.future);
+          },
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              if (packs.isNotEmpty)
+                ...packs.asMap().entries.map((entry) =>
+                  _PackListItem(pack: entry.value)
+                    .animate()
+                    .fadeIn(duration: 400.ms, delay: (entry.key * 100).ms)
+                    .slideX(begin: -0.1, end: 0, duration: 400.ms, delay: (entry.key * 100).ms, curve: Curves.easeOutCubic),
+                ),
+              const SizedBox(height: 16),
+              // Empty state CTA (always visible as a prompt to create more)
+              _CreatePackCta(isEmpty: packs.isEmpty),
+            ],
+          ),
         );
       },
     );
@@ -120,10 +148,10 @@ class _CreatePackCta extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: AppColors.pastels[4].withOpacity(0.3),
+          color: AppColors.pastels[4].withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppColors.purple.withOpacity(0.2),
+            color: AppColors.purple.withValues(alpha: 0.2),
             width: 2,
             strokeAlign: BorderSide.strokeAlignInside,
           ),
@@ -133,7 +161,7 @@ class _CreatePackCta extends StatelessWidget {
             Icon(
               Icons.add_circle_outline_rounded,
               size: 48,
-              color: AppColors.purple.withOpacity(0.5),
+              color: AppColors.purple.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 12),
             Text(
@@ -161,6 +189,68 @@ class _PackListItem extends StatelessWidget {
 
   const _PackListItem({required this.pack});
 
+  Future<void> _exportToWhatsApp(BuildContext context) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Preparing stickers for WhatsApp...'),
+        backgroundColor: AppColors.whatsappGreen,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    final exportService = WhatsAppExportService();
+    final stickerDataList = <StickerData>[];
+
+    for (final path in pack.stickerPaths) {
+      final file = File(path);
+      if (await file.exists()) {
+        final raw = await file.readAsBytes();
+        stickerDataList.add(StickerData(data: raw, sourcePath: path));
+      }
+    }
+
+    // Pad to minimum 3 stickers with proper 512x512 placeholders
+    while (stickerDataList.length < WhatsAppExportService.minStickersPerPack) {
+      stickerDataList.add(StickerData(data: WhatsAppExportService.generatePlaceholderSticker()));
+    }
+
+    // Tray icon
+    Uint8List trayIcon;
+    if (pack.trayIconPath != null) {
+      final trayFile = File(pack.trayIconPath!);
+      if (await trayFile.exists()) {
+        trayIcon = await trayFile.readAsBytes();
+      } else {
+        trayIcon = stickerDataList.first.data;
+      }
+    } else {
+      trayIcon = stickerDataList.first.data;
+    }
+
+    final result = await exportService.exportToWhatsApp(
+      packName: pack.name,
+      packAuthor: pack.authorName,
+      stickers: stickerDataList,
+      trayIcon: trayIcon,
+      trayIconSourcePath: pack.trayIconPath,
+    );
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.message),
+        backgroundColor:
+            result.success ? AppColors.whatsappGreen : AppColors.coral,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Pick a color deterministically from the pack id
@@ -168,11 +258,14 @@ class _PackListItem extends StatelessWidget {
     final colors = [AppColors.coral, AppColors.teal, AppColors.purple];
     final color = colors[colorIndex];
 
-    return GestureDetector(
-      onTap: () => context.push('/pack/${pack.id}'),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+    return Semantics(
+      button: true,
+      label: '${pack.name}, ${pack.stickerPaths.length} stickers. Tap to view, WhatsApp export available',
+      child: GestureDetector(
+        onTap: () => context.push('/pack/${pack.id}'),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
@@ -192,7 +285,7 @@ class _PackListItem extends StatelessWidget {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child:
@@ -252,22 +345,12 @@ class _PackListItem extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            // WhatsApp export button
+            // WhatsApp export button — actually calls export service
             WhatsAppButton(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Preparing stickers for WhatsApp...'),
-                    backgroundColor: AppColors.whatsappGreen,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                );
-              },
+              onPressed: () => _exportToWhatsApp(context),
             ),
           ],
+        ),
         ),
       ),
     );

@@ -43,8 +43,11 @@ class _WhatsAppButtonState extends State<WhatsAppButton>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _bounceController.reverse(),
+    return Semantics(
+      button: true,
+      label: widget.label,
+      child: GestureDetector(
+        onTapDown: (_) => _bounceController.reverse(),
       onTapUp: (_) {
         _bounceController.forward();
         HapticFeedback.mediumImpact();
@@ -60,7 +63,7 @@ class _WhatsAppButtonState extends State<WhatsAppButton>
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
-                color: AppColors.whatsappGreen.withOpacity(0.4),
+                color: AppColors.whatsappGreen.withValues(alpha:0.4),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
@@ -107,6 +110,7 @@ class _WhatsAppButtonState extends State<WhatsAppButton>
                     ),
           ),
         ),
+      ),
       ),
     );
   }

@@ -211,7 +211,7 @@ void main() {
       expect(find.text('LOL \u{1F602}'), findsOneWidget);
     });
 
-    testWidgets('AI style opens style transfer', (tester) async {
+    testWidgets('AI style shows error without image', (tester) async {
       await pumpEditor(tester);
       await tester.scrollUntilVisible(
         find.text('Style \u{1F308}'),
@@ -220,8 +220,8 @@ void main() {
       );
       await tester.tap(find.text('Style \u{1F308}'));
       await tester.pumpAndSettle();
-      expect(find.text('AI Style Transfer'), findsOneWidget);
-      expect(find.text('Cartoon'), findsOneWidget);
+      // No image loaded — shows error snackbar
+      expect(find.text('Load an image first to apply styles'), findsOneWidget);
     });
   });
 

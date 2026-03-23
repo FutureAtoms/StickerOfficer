@@ -105,6 +105,7 @@ void main() {
     return file.path;
   }
 
+  // ignore: unused_element
   Future<List<String>> createTempFrames(int count) async {
     final paths = <String>[];
     for (var i = 0; i < count; i++) {

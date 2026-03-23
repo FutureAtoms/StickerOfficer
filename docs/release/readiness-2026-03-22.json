@@ -1,0 +1,258 @@
+{
+  "app": {
+    "name": "StickerOfficer",
+    "version": "1.0.0+1",
+    "androidApplicationId": "com.futureatoms.sticker_officer",
+    "iosBundleId": "com.futureatoms.stickerOfficer"
+  },
+  "assessedOn": "2026-03-22",
+  "overallStatus": "not_production_ready",
+  "executiveSummary": [
+    "Core Flutter code is substantial and compiles for Android and iOS.",
+    "The current repo is not production ready because release signing, store metadata, backend wiring, monetization wiring, privacy links, and real-device WhatsApp verification are incomplete.",
+    "Android local distribution is ready via the split arm64 release APK.",
+    "iOS local over-the-air distribution is blocked until Apple signing assets and provisioning profiles are added."
+  ],
+  "verification": [
+    {
+      "name": "flutter analyze",
+      "status": "warning",
+      "details": "Completed with 194 issues; mostly warnings and info, but still not clean enough for a production gate."
+    },
+    {
+      "name": "flutter test",
+      "status": "passed",
+      "details": "974 tests passed locally. This is strong coverage for logic and widgets, but it is not equivalent to real-device validation."
+    },
+    {
+      "name": "flutter build appbundle --release",
+      "status": "passed",
+      "details": "Release Android App Bundle built successfully."
+    },
+    {
+      "name": "flutter build apk --release --split-per-abi",
+      "status": "passed",
+      "details": "Installable split APKs built successfully; arm64 is the preferred local Android artifact."
+    },
+    {
+      "name": "flutter build ios --release --no-codesign",
+      "status": "passed",
+      "details": "iOS Runner.app built successfully without signing. App Store or OTA distribution still requires Apple certificates, provisioning, and export."
+    },
+    {
+      "name": "functions npm run build",
+      "status": "passed",
+      "details": "Firebase Functions TypeScript compilation succeeded."
+    }
+  ],
+  "artifacts": [
+    {
+      "label": "Android arm64 release APK",
+      "path": "build/app/outputs/flutter-apk/app-arm64-v8a-release.apk",
+      "platform": "android",
+      "installable": true,
+      "recommended": true,
+      "notes": "Best artifact for local Wi-Fi download to a modern Android phone."
+    },
+    {
+      "label": "Android armeabi-v7a release APK",
+      "path": "build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk",
+      "platform": "android",
+      "installable": true,
+      "recommended": false,
+      "notes": "Useful only for older 32-bit Android devices."
+    },
+    {
+      "label": "Android universal release APK",
+      "path": "build/app/outputs/flutter-apk/app-release.apk",
+      "platform": "android",
+      "installable": true,
+      "recommended": false,
+      "notes": "Very large because it bundles all ABIs and FFmpeg native libraries."
+    },
+    {
+      "label": "Android release AAB",
+      "path": "build/app/outputs/bundle/release/app-release.aab",
+      "platform": "android",
+      "installable": false,
+      "recommended": false,
+      "notes": "Primary Play Store upload artifact after signing and store setup are finalized."
+    },
+    {
+      "label": "iOS Runner.app",
+      "path": "build/ios/iphoneos/Runner.app",
+      "platform": "ios",
+      "installable": false,
+      "recommended": false,
+      "notes": "Compiled app bundle only. Not directly installable on iPhone without signing/export."
+    },
+    {
+      "label": "iOS IPA",
+      "path": "build/ios/ipa/Runner.ipa",
+      "platform": "ios",
+      "installable": true,
+      "recommended": false,
+      "notes": "Will appear only after signed IPA export is added."
+    }
+  ],
+  "features": [
+    {
+      "name": "Core app shell, navigation, onboarding, local pack storage",
+      "status": "verified",
+      "evidence": "Compiled successfully and covered by widget/unit tests."
+    },
+    {
+      "name": "Static sticker editing and WhatsApp image normalization",
+      "status": "verified",
+      "evidence": "Covered by unit tests and release builds."
+    },
+    {
+      "name": "Animated sticker and video-to-sticker flows",
+      "status": "verified_in_tests",
+      "evidence": "Extensive unit/widget coverage exists, but no recent physical-device run was performed in this audit."
+    },
+    {
+      "name": "Shared sticker import from Android share sheet",
+      "status": "build_verified_needs_device",
+      "evidence": "Native Android intent/import code exists and compiles; needs a real Android phone test."
+    },
+    {
+      "name": "WhatsApp Android native sticker pack export",
+      "status": "build_verified_needs_device",
+      "evidence": "ContentProvider, whitelist checks, and add-pack flow compile and tests cover conversion logic; real WhatsApp verification is still required."
+    },
+    {
+      "name": "WhatsApp iOS export",
+      "status": "limited",
+      "evidence": "Current app falls back to share sheet on iOS; it is not the same seamless native experience as Android."
+    },
+    {
+      "name": "AI sticker generation",
+      "status": "not_ready",
+      "evidence": "Cloud function still returns placeholder data and the Flutter app startup still has Firebase TODO wiring."
+    },
+    {
+      "name": "Auth, social feed, search, challenges, profile",
+      "status": "partially_ready",
+      "evidence": "UI and local/demo data exist, but Firebase-backed production wiring is incomplete."
+    },
+    {
+      "name": "Monetization",
+      "status": "not_ready",
+      "evidence": "AdMob uses test app IDs and RevenueCat is listed in README but not implemented in the app."
+    }
+  ],
+  "blockers": [
+    {
+      "severity": "critical",
+      "title": "Release signing is not production configured",
+      "details": "Android release builds are currently signed with the debug key. iOS signing/export is not configured."
+    },
+    {
+      "severity": "critical",
+      "title": "Firebase production wiring is incomplete",
+      "details": "Firebase packages are commented out in pubspec.yaml and lib/main.dart still contains a Firebase initialization TODO."
+    },
+    {
+      "severity": "critical",
+      "title": "AI backend is stubbed",
+      "details": "functions/src/index.ts generateSticker still returns placeholder images and does not enforce a real quota pipeline."
+    },
+    {
+      "severity": "high",
+      "title": "Store and compliance metadata are incomplete",
+      "details": "StickerContentProvider still serves example privacy/license URLs, support/contact data is missing, and store listing assets have not been automated yet."
+    },
+    {
+      "severity": "high",
+      "title": "Ads and monetization are not production safe",
+      "details": "Both Android and iOS still use Google test AdMob app IDs."
+    },
+    {
+      "severity": "high",
+      "title": "No real-device WhatsApp sign-off was performed in this audit",
+      "details": "The current machine had no Android phone or iPhone attached, so WhatsApp add-pack flow was not executed against a physical device."
+    },
+    {
+      "severity": "high",
+      "title": "iOS WhatsApp experience is inherently weaker than Android",
+      "details": "Current implementation is share-sheet based on iOS. The official WhatsApp sample warns that iOS apps that only export stickers are likely to struggle with App Store review."
+    },
+    {
+      "severity": "medium",
+      "title": "Binary size is heavy",
+      "details": "arm64 APK is about 107.6MB and universal APK is about 326.6MB, largely because FFmpeg native libraries are bundled for multiple ABIs."
+    },
+    {
+      "severity": "medium",
+      "title": "Observability and release telemetry are missing",
+      "details": "Crashlytics, Analytics, Remote Config, and App Check are not wired."
+    },
+    {
+      "severity": "medium",
+      "title": "Static analysis gate is not clean",
+      "details": "flutter analyze completed with 194 issues."
+    }
+  ],
+  "launchPlan": [
+    {
+      "phase": "P0 Hardening",
+      "items": [
+        "Configure production Android signing and Play App Signing upload key.",
+        "Configure Apple Developer signing, provisioning, and export so a signed IPA can be produced.",
+        "Enable Firebase packages, initialize Firebase in Flutter, and wire Auth/Firestore/Storage/Functions end to end.",
+        "Replace generateSticker placeholder implementation with the real inference and quota pipeline.",
+        "Replace AdMob test IDs and add production monetization wiring.",
+        "Replace example privacy/license URLs and add support/contact pages."
+      ]
+    },
+    {
+      "phase": "P1 Device QA",
+      "items": [
+        "Run full Android manual test on a real phone with WhatsApp installed.",
+        "Verify sticker import from share sheet, pack creation, tray icon generation, and add-to-WhatsApp flow.",
+        "Run full iPhone manual test for editing, export/share, sign-in, and backend-connected flows.",
+        "Capture crash logs, performance notes, and broken-edge cases."
+      ]
+    },
+    {
+      "phase": "P2 Store Assets and Automation",
+      "items": [
+        "Add automated screenshot flows for Android and iOS.",
+        "Generate Play Store and App Store screenshots in the required device families and locales.",
+        "Create fastlane lanes or equivalent CI for screenshots, metadata, and store upload.",
+        "Prepare privacy policy, support site, Data safety form, content ratings, and review notes."
+      ]
+    },
+    {
+      "phase": "P3 Pre-release Distribution",
+      "items": [
+        "Android: use Internal App Sharing or internal testing after signing is finalized.",
+        "iOS: use TestFlight or signed ad hoc OTA once certificates/profiles are available.",
+        "Keep the local LAN dashboard for same-Wi-Fi Android installs during development."
+      ]
+    },
+    {
+      "phase": "P4 Submission",
+      "items": [
+        "Create final release candidates.",
+        "Upload store metadata, screenshots, and binaries.",
+        "Complete app review notes with demo credentials and reviewer instructions.",
+        "Submit Google Play first, then App Store after iOS review-risk items are reduced."
+      ]
+    }
+  ],
+  "research": {
+    "recommendedStack": [
+      "Fastlane for upload and metadata delivery",
+      "Maestro for deterministic cross-platform UI flows and screenshot capture orchestration",
+      "Flutter Screenshots or a Maestro-driven Flutter flow for screenshot generation",
+      "Optional iOS-only AppScreenshotKit if you want marketing-grade SwiftUI screenshot generation for native iOS views"
+    ],
+    "notes": [
+      "For this Flutter app, the most practical path is Maestro plus Fastlane, with screenshot export landing directly in the folders that deliver and supply expect.",
+      "For Android local testing, serve the split arm64 APK over LAN from this dashboard.",
+      "For iOS LAN installation, add signed IPA export and OTA manifest generation later."
+    ]
+  }
+}

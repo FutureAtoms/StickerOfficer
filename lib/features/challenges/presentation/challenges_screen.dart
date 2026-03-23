@@ -9,87 +9,99 @@ class ChallengesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final challenges = ref.watch(challengesProvider);
-
-    final activeChallenges =
-        challenges.where((c) => c.isActive || c.isVoting).toList();
-    final pastChallenges = challenges.where((c) => c.isCompleted).toList();
+    final challengesAsync = ref.watch(challengesProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Sticker Challenges')),
-      body:
-          challenges.isEmpty
-              ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.emoji_events_rounded,
-                      size: 64,
-                      color: AppColors.textSecondary.withValues(alpha:0.3),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No challenges available right now',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.textSecondary,
+      body: challengesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, __) => _empty(context),
+        data: (challenges) {
+          if (challenges.isEmpty) return _empty(context);
+
+          final activeChallenges =
+              challenges.where((c) => c.isActive || c.isVoting).toList();
+          final pastChallenges =
+              challenges.where((c) => c.isCompleted).toList();
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              if (activeChallenges.isNotEmpty) ...[
+                ...activeChallenges.asMap().entries.map((entry) {
+                  final challenge = entry.value;
+                  final i = entry.key;
+                  final daysLeft = challenge.endDate
+                      .difference(DateTime.now())
+                      .inDays
+                      .clamp(0, 999);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Semantics(
+                      label:
+                          '${challenge.title}, ${challenge.isActive ? "$daysLeft days left" : "Voting"}, ${challenge.submissionCount} submissions',
+                      child: _ChallengeDetailCard(
+                        title: challenge.title,
+                        description: challenge.description,
+                        daysLeft: daysLeft,
+                        submissions: challenge.submissionCount,
+                        isActive: challenge.isActive,
                       ),
                     ),
-                  ],
-                ),
-              )
-              : ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Active / voting challenges
-                  if (activeChallenges.isNotEmpty) ...[
-                    ...activeChallenges.asMap().entries.map((entry) {
-                      final challenge = entry.value;
-                      final i = entry.key;
-                      final daysLeft = challenge.endDate
-                          .difference(DateTime.now())
-                          .inDays
-                          .clamp(0, 999);
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Semantics(
-                          label: '${challenge.title}, ${challenge.isActive ? "$daysLeft days left" : "Voting"}, ${ challenge.submissionCount} submissions',
-                          child: _ChallengeDetailCard(
-                            title: challenge.title,
-                            description: challenge.description,
-                            daysLeft: daysLeft,
-                            submissions: challenge.submissionCount,
-                            isActive: challenge.isActive,
-                          ),
-                        ),
-                      )
+                  )
                       .animate()
                       .fadeIn(duration: 500.ms, delay: (i * 120).ms)
-                      .slideY(begin: 0.2, end: 0, duration: 500.ms, delay: (i * 120).ms, curve: Curves.easeOutCubic);
-                    }),
-                  ],
-
-                  // Past challenges
-                  if (pastChallenges.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Past Challenges',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 12),
-                    ...pastChallenges.asMap().entries.map(
-                      (entry) => _PastChallengeItem(
-                        title: entry.value.title,
-                        winner: entry.value.winnerName ?? 'TBD',
-                        submissions: entry.value.submissionCount,
-                      )
+                      .slideY(
+                          begin: 0.2,
+                          end: 0,
+                          duration: 500.ms,
+                          delay: (i * 120).ms,
+                          curve: Curves.easeOutCubic);
+                }),
+              ],
+              if (pastChallenges.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text('Past Challenges',
+                    style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                ...pastChallenges.asMap().entries.map(
+                  (entry) => _PastChallengeItem(
+                    title: entry.value.title,
+                    winner: entry.value.winnerName ?? 'TBD',
+                    submissions: entry.value.submissionCount,
+                  )
                       .animate()
                       .fadeIn(duration: 400.ms, delay: (entry.key * 80).ms)
-                      .slideX(begin: -0.1, end: 0, duration: 400.ms, delay: (entry.key * 80).ms),
-                    ),
-                  ],
-                ],
-              ),
+                      .slideX(
+                          begin: -0.1,
+                          end: 0,
+                          duration: 400.ms,
+                          delay: (entry.key * 80).ms),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _empty(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.emoji_events_rounded,
+              size: 64,
+              color: AppColors.textSecondary.withValues(alpha: 0.3)),
+          const SizedBox(height: 16),
+          Text('No challenges available right now',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(color: AppColors.textSecondary)),
+        ],
+      ),
     );
   }
 }

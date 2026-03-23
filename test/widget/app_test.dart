@@ -21,14 +21,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // MainShell uses BottomNavigationBar with 5 items
-      expect(find.byType(BottomNavigationBar), findsOneWidget);
-
-      // Verify all 5 navigation items are present
+      // Verify all navigation items are present
       expect(find.text('Home'), findsOneWidget);
       expect(find.text('Explore'), findsOneWidget);
       expect(find.text('My Packs'), findsOneWidget);
       expect(find.text('Profile'), findsOneWidget);
+
+      // Center create button with gradient
+      expect(find.byIcon(Icons.add_rounded), findsOneWidget);
     });
 
     testWidgets('displays StickerOfficer title in feed',

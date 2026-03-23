@@ -155,12 +155,23 @@ abstract class AppTheme {
       elevation: 4,
       shape: CircleBorder(),
     ),
+    chipTheme: ChipThemeData(
+      backgroundColor: AppColors.pastels[0].withValues(alpha: 0.2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    ),
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: AppColors.cardDark,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       showDragHandle: true,
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_borderRadius),
+      ),
     ),
   );
 }
