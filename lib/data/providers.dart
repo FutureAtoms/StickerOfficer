@@ -425,7 +425,7 @@ class UserStats {
 
 const _apiBaseUrl = String.fromEnvironment(
   'API_BASE_URL',
-  defaultValue: 'http://localhost:8787',
+  defaultValue: 'https://sticker-officer-api.ceofutureatoms.workers.dev',
 );
 
 final authServiceProvider = Provider<AuthService>((ref) {

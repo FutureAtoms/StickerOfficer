@@ -8,7 +8,7 @@ import 'package:dio/dio.dart';
 class HuggingFaceApiService {
   static const _defaultBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8787',
+    defaultValue: 'https://sticker-officer-api.ceofutureatoms.workers.dev',
   );
 
   final Dio _dio;

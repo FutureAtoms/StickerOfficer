@@ -2,11 +2,7 @@ name = "sticker-officer-api"
 main = "src/index.ts"
 compatibility_date = "2026-03-01"
 compatibility_flags = ["nodejs_compat"]
-
-[vars]
-JWT_SECRET = "dev-secret-do-not-use-in-production"
-HF_API_KEY = "placeholder"
-ADMIN_KEY = "placeholder"
+workers_dev = true
 
 [triggers]
 crons = ["0 * * * *"]
@@ -14,7 +10,7 @@ crons = ["0 * * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "sticker-officer"
-database_id = "placeholder"
+database_id = "86668ece-1e71-4578-98b8-0b79b3eb4542"
 
 [[r2_buckets]]
 binding = "R2"
@@ -22,4 +18,4 @@ bucket_name = "sticker-officer-packs"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "placeholder"
+id = "174803fc29b0450bbdf2d784d592fa81"
