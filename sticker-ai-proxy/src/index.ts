@@ -47,6 +47,59 @@ app.route('/profile', profile);
 // Admin routes: /admin/reports, /admin/action, /admin/challenges
 app.route('/admin', admin);
 
+// Batch pack registration (for CLI pipeline)
+app.post('/packs/register-batch', async (c) => {
+  const adminKey = c.req.header('Authorization')?.replace('Bearer ', '');
+  if (adminKey !== c.env.ADMIN_KEY) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const { packs } = await c.req.json<{
+    packs: Array<{
+      id: string;
+      name: string;
+      author_device_id: string;
+      sticker_count: number;
+      is_public: boolean;
+      tags: string;
+      stickers: Array<{ r2_key: string; emojis: string[]; position: number }>;
+    }>;
+  }>();
+
+  if (!packs || !Array.isArray(packs)) {
+    return c.json({ error: 'packs array required' }, 400);
+  }
+
+  let registered = 0;
+  for (const pack of packs) {
+    await c.env.DB.prepare(
+      'INSERT OR IGNORE INTO packs (id, name, author_device_id, sticker_count, is_public, tags) VALUES (?, ?, ?, ?, ?, ?)',
+    )
+      .bind(pack.id, pack.name, pack.author_device_id, pack.sticker_count, pack.is_public, pack.tags)
+      .run();
+
+    for (const sticker of pack.stickers) {
+      const stickerId = `${pack.id}_${sticker.position}`;
+      await c.env.DB.prepare(
+        'INSERT OR IGNORE INTO stickers (id, pack_id, r2_key, position) VALUES (?, ?, ?, ?)',
+      )
+        .bind(stickerId, pack.id, sticker.r2_key, sticker.position)
+        .run();
+
+      if (sticker.emojis && sticker.emojis.length > 0) {
+        await c.env.DB.prepare(
+          'INSERT OR IGNORE INTO sticker_metadata (id, pack_id, sticker_index, emojis, r2_key) VALUES (?, ?, ?, ?, ?)',
+        )
+          .bind(stickerId, pack.id, sticker.position, JSON.stringify(sticker.emojis), sticker.r2_key)
+          .run();
+      }
+    }
+    registered++;
+  }
+
+  return c.json({ ok: true, count: registered });
+});
+
 // R2 sticker serving: /r2/catalog.json, /r2/:packId/:sticker
 app.get('/r2/catalog.json', async (c) => {
   const object = await c.env.R2.get('catalog.json');

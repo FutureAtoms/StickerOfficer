@@ -1,0 +1,9 @@
+venv/
+tmp/
+__pycache__/
+.pytest_cache/
+*.pyc
+.env
+google_token.json
+google_credentials.json
+pipeline.log

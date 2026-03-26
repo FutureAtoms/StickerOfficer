@@ -1,0 +1,13 @@
+rembg==2.0.62
+onnxruntime==1.22.0
+open-clip-torch==2.29.0
+google-api-python-client==2.166.0
+google-auth-oauthlib==1.2.1
+boto3==1.36.26
+Pillow==11.2.1
+click==8.1.8
+python-dotenv==1.1.0
+tqdm==4.67.1
+ffmpeg-python==0.2.0
+pytest==8.3.5
+requests==2.32.3
