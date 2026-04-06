@@ -60,3 +60,4 @@ firebase_options.dart
 key.properties
 *.jks
 *.keystore
+.secrets/

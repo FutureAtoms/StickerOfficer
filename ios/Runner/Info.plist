@@ -48,8 +48,7 @@
 				<string>Editor</string>
 				<key>CFBundleURLSchemes</key>
 				<array>
-					<!-- Replace with your iOS Google OAuth reverse client ID -->
-					<string>com.googleusercontent.apps.YOUR_IOS_CLIENT_ID</string>
+					<string>com.googleusercontent.apps.76025587204-kq6peb7t30ojf86qjf4fpef5ks28l3h9</string>
 				</array>
 			</dict>
 		</array>

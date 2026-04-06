@@ -20,7 +20,7 @@ import '../../../data/providers.dart';
 /// from Google Cloud Console.
 const _googleServerClientId = String.fromEnvironment(
   'GOOGLE_SERVER_CLIENT_ID',
-  defaultValue: '',
+  defaultValue: '76025587204-9gu1r6uplk7p2dbt45n9pfrops7vmuja.apps.googleusercontent.com',
 );
 
 class LoginScreen extends ConsumerStatefulWidget {
