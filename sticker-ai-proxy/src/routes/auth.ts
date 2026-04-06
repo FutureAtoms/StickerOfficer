@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../index';
-import { signJwt } from '../utils/jwt';
+import { signJwt, fromBase64Url } from '../utils/jwt';
 import { generatePublicId } from '../utils/publicId';
 import { requireAuth } from '../middleware/auth';
 
@@ -152,8 +152,11 @@ auth.post('/google', async (c) => {
 
   // Verify Google ID token (with audience validation)
   const allowedGoogleClientIds = c.env.GOOGLE_CLIENT_IDS
-    ? c.env.GOOGLE_CLIENT_IDS.split(',').map((id) => id.trim())
+    ? c.env.GOOGLE_CLIENT_IDS.split(',').map((id) => id.trim()).filter((id) => id.length > 0)
     : [];
+  if (allowedGoogleClientIds.length === 0) {
+    return c.json({ error: 'Google Sign-In not configured (GOOGLE_CLIENT_IDS missing)' }, 503);
+  }
   const googleUser = await verifyGoogleToken(idToken, allowedGoogleClientIds);
   if (!googleUser) {
     return c.json({ error: 'Invalid Google ID token' }, 401);
@@ -250,6 +253,9 @@ auth.post('/apple', async (c) => {
   }
 
   // Verify Apple identity token
+  if (!c.env.APPLE_BUNDLE_ID) {
+    return c.json({ error: 'Apple Sign-In not configured (APPLE_BUNDLE_ID missing)' }, 503);
+  }
   const appleUser = await verifyAppleToken(identityToken, c.env.APPLE_BUNDLE_ID, c.env.KV);
   if (!appleUser) {
     return c.json({ error: 'Invalid Apple identity token' }, 401);
@@ -419,16 +425,6 @@ async function getAppleJWKS(kv: KVNamespace): Promise<{ keys: Array<Record<strin
   } catch {
     return null;
   }
-}
-
-/** Base64url decode helper (duplicated from jwt.ts for self-containment) */
-function fromBase64Url(str: string): Uint8Array {
-  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
-  while (base64.length % 4 !== 0) base64 += '=';
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
 }
 
 async function verifyGoogleToken(

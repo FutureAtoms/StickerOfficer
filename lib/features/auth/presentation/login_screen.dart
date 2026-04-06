@@ -55,7 +55,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       await ref.read(authStateProvider.notifier).signInWithGoogle(idToken);
 
-      if (mounted) context.pop();
+      if (mounted) {
+        setState(() => _isLoading = false);
+        context.pop();
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -101,9 +104,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       await ref
           .read(authStateProvider.notifier)
-          .signInWithApple(identityToken, fullName: fullName);
+          .signInWithApple(identityToken, fullName: fullName, rawNonce: rawNonce);
 
-      if (mounted) context.pop();
+      if (mounted) {
+        setState(() => _isLoading = false);
+        context.pop();
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);

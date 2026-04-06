@@ -20,6 +20,11 @@ bucket_name = "sticker-officer-packs"
 binding = "KV"
 id = "174803fc29b0450bbdf2d784d592fa81"
 
+# IMPORTANT: In production, override these via `wrangler secret put`:
+#   wrangler secret put JWT_SECRET
+#   wrangler secret put GOOGLE_CLIENT_IDS
+#   wrangler secret put APPLE_BUNDLE_ID
+# Cloudflare secrets always take precedence over [vars].
 [vars]
 JWT_SECRET = "test-secret-do-not-use-in-production"
 GOOGLE_CLIENT_IDS = ""

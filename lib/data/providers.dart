@@ -437,10 +437,10 @@ class AuthNotifier extends AsyncNotifier<AuthUser> {
   }
 
   Future<void> signInWithApple(String identityToken,
-      {String? fullName}) async {
+      {String? fullName, String? rawNonce}) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(
-        () => _auth.signInWithApple(identityToken, fullName: fullName));
+    state = await AsyncValue.guard(() =>
+        _auth.signInWithApple(identityToken, fullName: fullName, rawNonce: rawNonce));
   }
 
   Future<void> disconnectProvider() async {

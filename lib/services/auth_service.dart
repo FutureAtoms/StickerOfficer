@@ -90,12 +90,13 @@ class AuthService {
   /// [fullName] should be provided on the first authorization (Apple only
   /// sends the name once).
   Future<AuthUser> signInWithApple(String identityToken,
-      {String? fullName}) async {
+      {String? fullName, String? rawNonce}) async {
     final deviceId = await _storage.read(key: 'device_id');
     final response = await _dio.post('/auth/apple', data: {
       'identity_token': identityToken,
       if (deviceId != null) 'device_id': deviceId,
       if (fullName != null) 'full_name': fullName,
+      if (rawNonce != null) 'nonce': rawNonce,
     });
 
     final data = response.data as Map<String, dynamic>;
