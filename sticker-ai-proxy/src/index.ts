@@ -15,6 +15,8 @@ export type Env = {
   JWT_SECRET: string;
   HF_API_KEY: string;
   ADMIN_KEY: string;
+  GOOGLE_CLIENT_IDS: string;   // comma-separated list of allowed Google OAuth client IDs (Android, iOS, Web)
+  APPLE_BUNDLE_ID: string;     // iOS bundle ID for Apple Sign-In audience validation
 };
 
 const app = new Hono<{ Bindings: Env }>();

@@ -6,6 +6,7 @@ import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/search/presentation/search_screen.dart';
 import '../../features/editor/presentation/editor_screen.dart';
 import '../../features/editor/presentation/bulk_edit_screen.dart';
+import '../../features/editor/presentation/bulk_video_import_screen.dart';
 import '../../features/editor/presentation/animated_sticker_screen.dart';
 import '../../features/editor/presentation/video_to_sticker_screen.dart';
 import '../../features/packs/presentation/my_packs_screen.dart';
@@ -13,58 +14,79 @@ import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/packs/presentation/pack_detail_screen.dart';
 import '../../features/ai_generate/presentation/ai_prompt_screen.dart';
 import '../../features/challenges/presentation/challenges_screen.dart';
+import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/onboarding_screen.dart';
 import '../widgets/main_shell.dart';
+import '../../data/providers.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/home',
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.emoji_emotions_rounded,
-                size: 80,
-                color: AppColors.coral.withValues(alpha: 0.4),
+    redirect: (context, state) {
+      final prefs = ref.read(sharedPreferencesProvider);
+      final hasSeenOnboarding = prefs.getBool('onboarding_complete') ?? false;
+      final location = state.matchedLocation;
+
+      // Don't redirect if already on onboarding or login
+      if (location == '/onboarding' || location == '/login') return null;
+
+      // Don't redirect if navigating to a pack (import deep link)
+      if (location.startsWith('/pack/')) return null;
+
+      if (!hasSeenOnboarding) return '/onboarding';
+      return null;
+    },
+    errorBuilder:
+        (context, state) => Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.emoji_emotions_rounded,
+                    size: 80,
+                    color: AppColors.coral.withValues(alpha: 0.4),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Oops! Page not found',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'The sticker you\'re looking for ran away!',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () => context.go('/home'),
+                    icon: const Icon(Icons.home_rounded),
+                    label: const Text('Go Home'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.coral,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-              Text(
-                'Oops! Page not found',
-                style: Theme.of(context).textTheme.headlineMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'The sticker you\'re looking for ran away!',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () => context.go('/home'),
-                icon: const Icon(Icons.home_rounded),
-                label: const Text('Go Home'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.coral,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
+            ),
           ),
         ),
-      ),
-    ),
     routes: [
-      // Onboarding
+      // Auth
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
       ),
       // Main shell with bottom nav
       ShellRoute(
@@ -129,6 +151,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/bulk-video-editor/:packId',
+        builder: (context, state) {
+          final packId = state.pathParameters['packId']!;
+          return BulkVideoImportScreen(packId: packId);
+        },
+      ),
+      GoRoute(
         path: '/ai-generate',
         builder: (context, state) => const AiPromptScreen(),
       ),
@@ -148,6 +177,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               initialFramePaths: extra['frames'] as List<String>?,
               ffmpegGifPath: extra['gifPath'] as String?,
               initialFps: extra['fps'] as int?,
+              bulkMode: extra['bulkMode'] as bool? ?? false,
             );
           }
           return AnimatedStickerScreen(
@@ -157,7 +187,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/video-to-sticker',
-        builder: (context, state) => const VideoToStickerScreen(),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is Map<String, dynamic>) {
+            return VideoToStickerScreen(
+              initialVideoPath: extra['initialVideoPath'] as String?,
+              bulkMode: extra['bulkMode'] as bool? ?? false,
+            );
+          }
+          return const VideoToStickerScreen();
+        },
       ),
       GoRoute(
         path: '/challenges',

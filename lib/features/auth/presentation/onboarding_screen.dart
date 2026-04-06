@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/bubbly_button.dart';
+import '../../../data/providers.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
 
@@ -39,6 +41,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
+  void _finishOnboarding() {
+    ref.read(sharedPreferencesProvider).setBool('onboarding_complete', true);
+    context.go('/home');
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -55,7 +62,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Align(
               alignment: Alignment.topRight,
               child: TextButton(
-                onPressed: () => context.go('/home'),
+                onPressed: () => _finishOnboarding(),
                 child: const Text('Skip'),
               ),
             ),
@@ -89,16 +96,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            // Action button
+            // Action button(s)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child:
                   _currentPage == _pages.length - 1
-                      ? BubblyButton(
-                        label: 'Get Started',
-                        gradient: AppColors.primaryGradient,
-                        onPressed: () => context.go('/home'),
-                      )
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            BubblyButton(
+                              label: 'Get Started',
+                              gradient: AppColors.primaryGradient,
+                              onPressed: () => _finishOnboarding(),
+                            ),
+                            const SizedBox(height: 12),
+                            TextButton(
+                              onPressed: () {
+                                _finishOnboarding();
+                                context.push('/login');
+                              },
+                              child: const Text(
+                                'or sign in with Google / Apple',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
                       : BubblyButton(
                         label: 'Next',
                         color: AppColors.coral,

@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
+import 'models/auth_user.dart';
 import 'models/challenge.dart';
 import 'models/sticker_pack.dart';
 import 'repositories/pack_repository.dart';
@@ -55,8 +56,17 @@ class PacksNotifier extends AsyncNotifier<List<StickerPack>> {
 
   @override
   FutureOr<List<StickerPack>> build() async {
-    await _seedDemoDataIfEmpty();
-    return _repo.getPacks();
+    // Return existing packs immediately so the UI renders fast.
+    // Seed demo data in the background on first launch.
+    final existing = _repo.getPacks();
+    if (existing.isEmpty) {
+      // Don't await — seed in background and refresh when done
+      _seedDemoDataIfEmpty().then((_) {
+        state = AsyncValue.data(_repo.getPacks());
+      });
+      return [];
+    }
+    return existing;
   }
 
   /// Adds a brand-new pack and refreshes state.
@@ -106,9 +116,10 @@ class PacksNotifier extends AsyncNotifier<List<StickerPack>> {
       if (index < 0) return packs;
 
       final pack = packs[index];
-      final newCount = isCurrentlyLiked
-          ? (pack.likeCount - 1).clamp(0, 999999)
-          : pack.likeCount + 1;
+      final newCount =
+          isCurrentlyLiked
+              ? (pack.likeCount - 1).clamp(0, 999999)
+              : pack.likeCount + 1;
       final updated = pack.copyWith(likeCount: newCount);
       await _repo.updatePack(updated);
       return _repo.getPacks();
@@ -195,7 +206,8 @@ class PacksNotifier extends AsyncNotifier<List<StickerPack>> {
       String? trayPath;
 
       for (var s = 0; s < spec.count; s++) {
-        final assetPath = 'assets/seed_stickers/${spec.assetPrefix}_${s + 1}.png';
+        final assetPath =
+            'assets/seed_stickers/${spec.assetPrefix}_${s + 1}.png';
         final filePath = '$packDir/sticker_$s.png';
 
         try {
@@ -218,6 +230,7 @@ class PacksNotifier extends AsyncNotifier<List<StickerPack>> {
         id: packId,
         name: spec.name,
         authorName: spec.authorName,
+        type: StickerPackType.staticPack,
         stickerPaths: stickerPaths,
         trayIconPath: trayPath,
         likeCount: spec.likeCount,
@@ -263,20 +276,16 @@ class _SeedPack {
 const _likedPacksKey = 'liked_packs';
 
 final likedPacksProvider =
-    StateNotifierProvider<LikedPacksNotifier, Set<String>>(
-  (ref) {
-    final prefs = ref.watch(sharedPreferencesProvider);
-    return LikedPacksNotifier(prefs);
-  },
-);
+    StateNotifierProvider<LikedPacksNotifier, Set<String>>((ref) {
+      final prefs = ref.watch(sharedPreferencesProvider);
+      return LikedPacksNotifier(prefs);
+    });
 
 class LikedPacksNotifier extends StateNotifier<Set<String>> {
   final SharedPreferences _prefs;
 
   LikedPacksNotifier(this._prefs)
-      : super(
-          (_prefs.getStringList(_likedPacksKey) ?? []).toSet(),
-        );
+    : super((_prefs.getStringList(_likedPacksKey) ?? []).toSet());
 
   bool isLiked(String packId) => state.contains(packId);
 
@@ -407,9 +416,45 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient(baseUrl: _apiBaseUrl, authService: auth);
 });
 
-/// Resolves the current device's public_id by ensuring auth registration.
-final publicIdProvider = FutureProvider<String?>((ref) async {
-  final auth = ref.read(authServiceProvider);
-  await auth.ensureRegistered();
-  return auth.publicId;
+/// Auth state — the single source of truth for the current user's identity.
+/// Automatically registers anonymously on first launch, then preserves
+/// social sign-in state across app restarts.
+final authStateProvider =
+    AsyncNotifierProvider<AuthNotifier, AuthUser>(AuthNotifier.new);
+
+class AuthNotifier extends AsyncNotifier<AuthUser> {
+  AuthService get _auth => ref.read(authServiceProvider);
+
+  @override
+  Future<AuthUser> build() async {
+    await _auth.ensureRegistered();
+    return _auth.getAuthUser();
+  }
+
+  Future<void> signInWithGoogle(String idToken) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() => _auth.signInWithGoogle(idToken));
+  }
+
+  Future<void> signInWithApple(String identityToken,
+      {String? fullName}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+        () => _auth.signInWithApple(identityToken, fullName: fullName));
+  }
+
+  Future<void> disconnectProvider() async {
+    await _auth.disconnectProvider();
+    state = await AsyncValue.guard(() => _auth.getAuthUser());
+  }
+}
+
+/// Whether the user has linked a social account (Google or Apple).
+final isSignedInProvider = Provider<bool>((ref) {
+  return ref.watch(authStateProvider).valueOrNull?.isSocial ?? false;
+});
+
+/// Backward-compatible publicId provider — derives from authStateProvider.
+final publicIdProvider = Provider<AsyncValue<String?>>((ref) {
+  return ref.watch(authStateProvider).whenData((u) => u.publicId);
 });

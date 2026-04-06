@@ -18,7 +18,7 @@ async function workerFetch(path: string, init?: RequestInit) {
 
 // Schema — each table as a single logical line for D1 exec()
 const DEVICES_SCHEMA =
-  "CREATE TABLE IF NOT EXISTS devices (device_id TEXT PRIMARY KEY, public_id TEXT UNIQUE NOT NULL, display_name TEXT, terms_accepted_at TEXT, is_blocked BOOLEAN DEFAULT FALSE, packs_created INTEGER DEFAULT 0, total_likes_received INTEGER DEFAULT 0, first_seen TEXT DEFAULT (datetime('now')), last_seen TEXT DEFAULT (datetime('now')));";
+  "CREATE TABLE IF NOT EXISTS devices (device_id TEXT PRIMARY KEY, public_id TEXT UNIQUE NOT NULL, display_name TEXT, terms_accepted_at TEXT, is_blocked BOOLEAN DEFAULT FALSE, packs_created INTEGER DEFAULT 0, total_likes_received INTEGER DEFAULT 0, first_seen TEXT DEFAULT (datetime('now')), last_seen TEXT DEFAULT (datetime('now')), google_id TEXT, google_email TEXT, google_name TEXT, google_photo TEXT, apple_id TEXT, apple_email TEXT, apple_name TEXT);";
 
 const PACKS_SCHEMA =
   "CREATE TABLE IF NOT EXISTS packs (id TEXT PRIMARY KEY, name TEXT NOT NULL, author_device_id TEXT NOT NULL REFERENCES devices(device_id), category TEXT, sticker_count INTEGER DEFAULT 0, like_count INTEGER DEFAULT 0, download_count INTEGER DEFAULT 0, is_public BOOLEAN DEFAULT FALSE, is_removed BOOLEAN DEFAULT FALSE, tags TEXT, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')));";

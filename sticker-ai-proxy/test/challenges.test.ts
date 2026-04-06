@@ -18,7 +18,7 @@ async function workerFetch(path: string, init?: RequestInit) {
 
 // Schema statements — each must be a single logical statement for D1 exec()
 const DEVICES_SCHEMA =
-  "CREATE TABLE IF NOT EXISTS devices (device_id TEXT PRIMARY KEY, public_id TEXT UNIQUE NOT NULL, display_name TEXT, terms_accepted_at TEXT, is_blocked BOOLEAN DEFAULT FALSE, packs_created INTEGER DEFAULT 0, total_likes_received INTEGER DEFAULT 0, first_seen TEXT DEFAULT (datetime('now')), last_seen TEXT DEFAULT (datetime('now')));";
+  "CREATE TABLE IF NOT EXISTS devices (device_id TEXT PRIMARY KEY, public_id TEXT UNIQUE NOT NULL, display_name TEXT, terms_accepted_at TEXT, is_blocked BOOLEAN DEFAULT FALSE, packs_created INTEGER DEFAULT 0, total_likes_received INTEGER DEFAULT 0, first_seen TEXT DEFAULT (datetime('now')), last_seen TEXT DEFAULT (datetime('now')), google_id TEXT, google_email TEXT, google_name TEXT, google_photo TEXT, apple_id TEXT, apple_email TEXT, apple_name TEXT);";
 
 const CHALLENGES_SCHEMA =
   "CREATE TABLE IF NOT EXISTS challenges (id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT, theme TEXT NOT NULL, status TEXT DEFAULT 'upcoming', starts_at TEXT NOT NULL, voting_at TEXT NOT NULL, ends_at TEXT NOT NULL, created_at TEXT DEFAULT (datetime('now')));";

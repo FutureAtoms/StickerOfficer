@@ -41,6 +41,18 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
+		<key>CFBundleURLTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>CFBundleURLSchemes</key>
+				<array>
+					<!-- Replace with your iOS Google OAuth reverse client ID -->
+					<string>com.googleusercontent.apps.YOUR_IOS_CLIENT_ID</string>
+				</array>
+			</dict>
+		</array>
 		<key>GADApplicationIdentifier</key>
 		<string>ca-app-pub-3940256099942544~1458002511</string>
 		<key>CADisableMinimumFrameDurationOnPhone</key>

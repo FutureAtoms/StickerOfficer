@@ -19,7 +19,8 @@ async function workerFetch(path: string, init?: RequestInit) {
 }
 
 // Schema SQL — D1 exec() requires each statement on one logical line
-const SCHEMA = "CREATE TABLE IF NOT EXISTS devices (device_id TEXT PRIMARY KEY, public_id TEXT UNIQUE NOT NULL, display_name TEXT, terms_accepted_at TEXT, is_blocked BOOLEAN DEFAULT FALSE, packs_created INTEGER DEFAULT 0, total_likes_received INTEGER DEFAULT 0, first_seen TEXT DEFAULT (datetime('now')), last_seen TEXT DEFAULT (datetime('now')));";
+// Includes social columns from migration 002 (Google) and 003 (Apple)
+const SCHEMA = "CREATE TABLE IF NOT EXISTS devices (device_id TEXT PRIMARY KEY, public_id TEXT UNIQUE NOT NULL, display_name TEXT, terms_accepted_at TEXT, is_blocked BOOLEAN DEFAULT FALSE, packs_created INTEGER DEFAULT 0, total_likes_received INTEGER DEFAULT 0, first_seen TEXT DEFAULT (datetime('now')), last_seen TEXT DEFAULT (datetime('now')), google_id TEXT, google_email TEXT, google_name TEXT, google_photo TEXT, apple_id TEXT, apple_email TEXT, apple_name TEXT);";
 
 describe('Auth routes', () => {
   beforeEach(async () => {
@@ -75,7 +76,7 @@ describe('Auth routes', () => {
     expect(data.error).toContain('device_id');
   });
 
-  it('POST /auth/refresh with valid token returns new token', async () => {
+  it('POST /auth/refresh with device_id returns new token', async () => {
     // First register
     const regRes = await workerFetch('/auth/register', {
       method: 'POST',
@@ -84,19 +85,18 @@ describe('Auth routes', () => {
     });
     const regData = await regRes.json() as { token: string; public_id: string };
 
-    // Then refresh
+    // Then refresh using device_id (no auth header needed)
     const refreshRes = await workerFetch('/auth/refresh', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${regData.token}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_id: 'test-device-003' }),
     });
 
     expect(refreshRes.status).toBe(200);
-    const refreshData = await refreshRes.json() as { token: string; public_id: string; expires_in: number };
+    const refreshData = await refreshRes.json() as { token: string; public_id: string; device_id: string; expires_in: number };
     expect(refreshData.token).toBeTruthy();
     expect(refreshData.public_id).toBe(regData.public_id);
+    expect(refreshData.device_id).toBe('test-device-003');
     expect(refreshData.expires_in).toBe(31536000);
   });
 
@@ -139,12 +139,37 @@ describe('Auth routes', () => {
     expect(after?.terms_accepted_at).toBeTruthy();
   });
 
-  it('POST /auth/refresh without token returns 401', async () => {
+  it('POST /auth/refresh without device_id returns 400', async () => {
     const res = await workerFetch('/auth/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
     });
 
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(400);
+    const data = await res.json() as { error: string };
+    expect(data.error).toContain('device_id');
+  });
+
+  it('POST /auth/refresh with unknown device returns 404', async () => {
+    const res = await workerFetch('/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_id: 'nonexistent-device' }),
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('POST /auth/register returns device_id in response', async () => {
+    const res = await workerFetch('/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_id: 'test-device-devid' }),
+    });
+
+    expect(res.status).toBe(200);
+    const data = await res.json() as { token: string; public_id: string; device_id: string };
+    expect(data.device_id).toBe('test-device-devid');
   });
 });

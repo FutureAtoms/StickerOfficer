@@ -182,9 +182,9 @@ void main() {
       expect(find.text('About StickerOfficer'), findsOneWidget);
     });
 
-    testWidgets('shows sign out button', (tester) async {
+    testWidgets('shows sign in option for anonymous user', (tester) async {
       await pumpProfile(tester);
-      expect(find.text('Sign Out'), findsOneWidget);
+      expect(find.text('Sign In'), findsOneWidget);
     });
   });
 

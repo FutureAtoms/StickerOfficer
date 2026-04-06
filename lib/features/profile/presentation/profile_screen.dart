@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/widgets/report_button.dart';
 import '../../../data/providers.dart';
+import 'theme_picker_sheet.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -14,7 +15,8 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(userStatsProvider);
-    final publicIdAsync = ref.watch(publicIdProvider);
+    final authAsync = ref.watch(authStateProvider);
+    final authUser = authAsync.valueOrNull;
 
     final stats = statsAsync.when(
       data: (s) => s,
@@ -23,7 +25,7 @@ class ProfileScreen extends ConsumerWidget {
       error: (_, __) => const UserStats(
           packCount: 0, totalStickers: 0, totalLikes: 0, totalDownloads: 0),
     );
-    final publicId = publicIdAsync.valueOrNull;
+    final publicId = authUser?.publicId;
 
     return Scaffold(
       body: SafeArea(
@@ -39,7 +41,9 @@ class ProfileScreen extends ConsumerWidget {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
+                    gradient: authUser?.photoUrl != null
+                        ? null
+                        : AppColors.primaryGradient,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -49,8 +53,21 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.person_rounded,
-                      size: 48, color: Colors.white),
+                  child: authUser?.photoUrl != null && authUser!.photoUrl!.isNotEmpty
+                      ? ClipOval(
+                          child: Image.network(
+                            authUser.photoUrl!,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                                Icons.person_rounded,
+                                size: 48,
+                                color: Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.person_rounded,
+                          size: 48, color: Colors.white),
                 ),
               )
                   .animate()
@@ -61,7 +78,10 @@ class ProfileScreen extends ConsumerWidget {
                       duration: 600.ms,
                       curve: Curves.easeOutBack),
               const SizedBox(height: 16),
-              Text('Sticker Creator',
+              Text(
+                  authUser?.displayName?.isNotEmpty == true
+                      ? authUser!.displayName!
+                      : 'Sticker Creator',
                   style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 4),
               if (publicId != null)
@@ -109,6 +129,57 @@ class ProfileScreen extends ConsumerWidget {
               // Settings section
               _SettingsSection(
                 items: [
+                  // Sign In / Disconnect account
+                  if (authUser == null || authUser.isAnonymous)
+                    _SettingsItem(
+                      icon: Icons.login_rounded,
+                      label: 'Sign In',
+                      color: AppColors.teal,
+                      onTap: () => context.push('/login'),
+                    )
+                  else
+                    _SettingsItem(
+                      icon: Icons.link_off_rounded,
+                      label: 'Disconnect ${authUser.method.name[0].toUpperCase()}${authUser.method.name.substring(1)}',
+                      color: AppColors.coral,
+                      onTap: () async {
+                        final shouldDisconnect = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            title: const Text('Disconnect Account'),
+                            content: const Text(
+                              'This will disconnect your social account. '
+                              'Your stickers and data will be kept.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop(true),
+                                child: const Text(
+                                  'Disconnect',
+                                  style: TextStyle(color: AppColors.coral),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (shouldDisconnect == true) {
+                          ref.read(authStateProvider.notifier).disconnectProvider();
+                        }
+                      },
+                    ),
+                  _SettingsItem(
+                    icon: Icons.palette_rounded,
+                    label: 'Theme',
+                    color: AppColors.purple,
+                    onTap: () => showThemePickerSheet(context),
+                  ),
                   _SettingsItem(
                     icon: Icons.privacy_tip_rounded,
                     label: 'Privacy Policy',
@@ -160,43 +231,6 @@ class ProfileScreen extends ConsumerWidget {
               .animate()
               .fadeIn(duration: 500.ms, delay: 300.ms)
               .slideY(begin: 0.15, end: 0, duration: 500.ms, delay: 300.ms),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: () async {
-                  final shouldSignOut = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      title: const Text('Sign Out'),
-                      content: const Text(
-                        'Are you sure you want to sign out?',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(true),
-                          child: const Text(
-                            'Sign Out',
-                            style: TextStyle(color: AppColors.coral),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (shouldSignOut == true && context.mounted) {
-                    context.go('/onboarding');
-                  }
-                },
-                child: const Text(
-                  'Sign Out',
-                  style: TextStyle(color: AppColors.coral),
-                ),
-              ),
               const SizedBox(height: 32),
             ],
           ),

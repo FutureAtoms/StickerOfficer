@@ -19,3 +19,8 @@ bucket_name = "sticker-officer-packs"
 [[kv_namespaces]]
 binding = "KV"
 id = "174803fc29b0450bbdf2d784d592fa81"
+
+[vars]
+JWT_SECRET = "test-secret-do-not-use-in-production"
+GOOGLE_CLIENT_IDS = ""
+APPLE_BUNDLE_ID = ""

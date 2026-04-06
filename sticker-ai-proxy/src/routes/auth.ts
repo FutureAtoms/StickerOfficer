@@ -63,24 +63,57 @@ auth.post('/register', async (c) => {
     EXPIRES_IN,
   );
 
-  return c.json({ token, public_id: publicId, expires_in: EXPIRES_IN });
+  return c.json({ token, public_id: publicId, device_id: deviceId, expires_in: EXPIRES_IN });
 });
 
 /**
  * POST /refresh
- * Requires valid JWT. Re-signs with same claims.
+ * Body: { device_id: string }
+ * Validates device exists and re-issues JWT. No auth required —
+ * the device_id itself is a UUID secret, and requiring a valid token
+ * to refresh creates a chicken-and-egg problem when the token expires.
  */
-auth.post('/refresh', requireAuth, async (c) => {
-  const deviceId = c.get('deviceId');
-  const publicId = c.get('publicId');
+auth.post('/refresh', async (c) => {
+  let body: { device_id?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const deviceId = body.device_id;
+  if (!deviceId || typeof deviceId !== 'string' || deviceId.trim().length === 0) {
+    return c.json({ error: 'device_id is required' }, 400);
+  }
+
+  const device = await c.env.DB.prepare(
+    'SELECT public_id, is_blocked FROM devices WHERE device_id = ?',
+  )
+    .bind(deviceId)
+    .first<{ public_id: string; is_blocked: number | boolean }>();
+
+  if (!device) {
+    return c.json({ error: 'Device not found' }, 404);
+  }
+
+  if (device.is_blocked) {
+    return c.json({ error: 'Device is blocked' }, 403);
+  }
+
+  // Update last_seen
+  await c.env.DB.prepare(
+    "UPDATE devices SET last_seen = datetime('now') WHERE device_id = ?",
+  )
+    .bind(deviceId)
+    .run();
 
   const token = await signJwt(
-    { sub: deviceId, pid: publicId },
+    { sub: deviceId, pid: device.public_id },
     c.env.JWT_SECRET,
     EXPIRES_IN,
   );
 
-  return c.json({ token, public_id: publicId, expires_in: EXPIRES_IN });
+  return c.json({ token, public_id: device.public_id, device_id: deviceId, expires_in: EXPIRES_IN });
 });
 
 /**
@@ -117,8 +150,11 @@ auth.post('/google', async (c) => {
     return c.json({ error: 'id_token is required' }, 400);
   }
 
-  // Verify Google ID token
-  const googleUser = await verifyGoogleToken(idToken);
+  // Verify Google ID token (with audience validation)
+  const allowedGoogleClientIds = c.env.GOOGLE_CLIENT_IDS
+    ? c.env.GOOGLE_CLIENT_IDS.split(',').map((id) => id.trim())
+    : [];
+  const googleUser = await verifyGoogleToken(idToken, allowedGoogleClientIds);
   if (!googleUser) {
     return c.json({ error: 'Invalid Google ID token' }, 401);
   }
@@ -184,14 +220,221 @@ auth.post('/google', async (c) => {
   return c.json({
     token,
     public_id: publicId,
+    device_id: deviceId,
+    auth_method: 'google',
     google_name: googleUser.name,
+    google_email: googleUser.email,
     google_photo: googleUser.picture,
     expires_in: EXPIRES_IN,
   });
 });
 
 
-async function verifyGoogleToken(idToken: string): Promise<{
+/**
+ * POST /apple
+ * Body: { identity_token: string, device_id?: string, full_name?: string }
+ * Verifies Apple identity token, creates/links account, issues JWT.
+ * full_name is accepted because Apple only provides the name on the first authorization.
+ */
+auth.post('/apple', async (c) => {
+  let body: { identity_token?: string; device_id?: string; full_name?: string };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const identityToken = body.identity_token;
+  if (!identityToken) {
+    return c.json({ error: 'identity_token is required' }, 400);
+  }
+
+  // Verify Apple identity token
+  const appleUser = await verifyAppleToken(identityToken, c.env.APPLE_BUNDLE_ID, c.env.KV);
+  if (!appleUser) {
+    return c.json({ error: 'Invalid Apple identity token' }, 401);
+  }
+
+  // Use client-provided name (Apple only sends it on first auth)
+  const appleName = body.full_name || appleUser.name || '';
+
+  // Check if Apple account already linked
+  const existingByApple = await c.env.DB.prepare(
+    'SELECT device_id, public_id FROM devices WHERE apple_id = ?',
+  )
+    .bind(appleUser.sub)
+    .first<{ device_id: string; public_id: string }>();
+
+  let deviceId: string;
+  let publicId: string;
+
+  if (existingByApple) {
+    // Existing Apple-linked account — return its identity
+    deviceId = existingByApple.device_id;
+    publicId = existingByApple.public_id;
+    await c.env.DB.prepare(
+      "UPDATE devices SET last_seen = datetime('now'), apple_name = ? WHERE device_id = ?",
+    )
+      .bind(appleName, deviceId)
+      .run();
+  } else if (body.device_id) {
+    // Link Apple to existing anonymous device
+    const existingDevice = await c.env.DB.prepare(
+      'SELECT public_id FROM devices WHERE device_id = ?',
+    )
+      .bind(body.device_id)
+      .first<{ public_id: string }>();
+
+    if (existingDevice) {
+      deviceId = body.device_id;
+      publicId = existingDevice.public_id;
+      await c.env.DB.prepare(
+        'UPDATE devices SET apple_id = ?, apple_email = ?, apple_name = ? WHERE device_id = ?',
+      )
+        .bind(appleUser.sub, appleUser.email, appleName, deviceId)
+        .run();
+    } else {
+      // device_id not found — create new device with Apple linked
+      deviceId = body.device_id;
+      publicId = generatePublicId();
+      await c.env.DB.prepare(
+        'INSERT INTO devices (device_id, public_id, apple_id, apple_email, apple_name) VALUES (?, ?, ?, ?, ?)',
+      )
+        .bind(deviceId, publicId, appleUser.sub, appleUser.email, appleName)
+        .run();
+    }
+  } else {
+    // No device_id — create brand new device
+    deviceId = `apple_${appleUser.sub}`;
+    publicId = generatePublicId();
+    await c.env.DB.prepare(
+      'INSERT INTO devices (device_id, public_id, apple_id, apple_email, apple_name) VALUES (?, ?, ?, ?, ?)',
+    )
+      .bind(deviceId, publicId, appleUser.sub, appleUser.email, appleName)
+      .run();
+  }
+
+  const token = await signJwt(
+    { sub: deviceId, pid: publicId },
+    c.env.JWT_SECRET,
+    EXPIRES_IN,
+  );
+
+  return c.json({
+    token,
+    public_id: publicId,
+    device_id: deviceId,
+    auth_method: 'apple',
+    apple_name: appleName,
+    apple_email: appleUser.email,
+    expires_in: EXPIRES_IN,
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// Token verification helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Verify Apple identity token using JWKS.
+ * Fetches Apple's public keys (cached in KV for 24h), validates RS256 signature,
+ * issuer, audience, and expiry.
+ */
+async function verifyAppleToken(
+  identityToken: string,
+  expectedBundleId: string,
+  kv: KVNamespace,
+): Promise<{ sub: string; email: string; name: string } | null> {
+  try {
+    const parts = identityToken.split('.');
+    if (parts.length !== 3) return null;
+
+    const headerJson = new TextDecoder().decode(fromBase64Url(parts[0]));
+    const header = JSON.parse(headerJson) as { kid: string; alg: string };
+    if (header.alg !== 'RS256') return null;
+
+    // Fetch Apple's JWKS (cached in KV)
+    const jwks = await getAppleJWKS(kv);
+    if (!jwks) return null;
+
+    const matchingKey = jwks.keys.find(
+      (k: { kid: string }) => k.kid === header.kid,
+    );
+    if (!matchingKey) return null;
+
+    // Import the RSA public key
+    const publicKey = await crypto.subtle.importKey(
+      'jwk',
+      matchingKey,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false,
+      ['verify'],
+    );
+
+    // Verify signature
+    const signingInput = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
+    const signature = fromBase64Url(parts[2]);
+    const valid = await crypto.subtle.verify(
+      'RSASSA-PKCS1-v1_5',
+      publicKey,
+      signature.buffer as ArrayBuffer,
+      signingInput,
+    );
+    if (!valid) return null;
+
+    // Decode and validate payload
+    const payloadJson = new TextDecoder().decode(fromBase64Url(parts[1]));
+    const payload = JSON.parse(payloadJson) as Record<string, unknown>;
+
+    if (payload.iss !== 'https://appleid.apple.com') return null;
+    if (expectedBundleId && payload.aud !== expectedBundleId) return null;
+    if (typeof payload.exp === 'number' && payload.exp < Math.floor(Date.now() / 1000)) return null;
+
+    return {
+      sub: payload.sub as string,
+      email: (payload.email as string) || '',
+      name: '',  // Apple doesn't include name in the token — must be passed by client
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Fetch Apple JWKS with 24-hour KV cache */
+async function getAppleJWKS(kv: KVNamespace): Promise<{ keys: Array<Record<string, unknown>> } | null> {
+  const cacheKey = 'apple_jwks';
+  const cached = await kv.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  try {
+    const resp = await fetch('https://appleid.apple.com/auth/keys');
+    if (!resp.ok) return null;
+    const jwks = await resp.json() as { keys: Array<Record<string, unknown>> };
+    // Cache for 24 hours
+    await kv.put(cacheKey, JSON.stringify(jwks), { expirationTtl: 86400 });
+    return jwks;
+  } catch {
+    return null;
+  }
+}
+
+/** Base64url decode helper (duplicated from jwt.ts for self-containment) */
+function fromBase64Url(str: string): Uint8Array {
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (base64.length % 4 !== 0) base64 += '=';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+async function verifyGoogleToken(
+  idToken: string,
+  allowedClientIds: string[],
+): Promise<{
   sub: string; email: string; name: string; picture: string;
 } | null> {
   try {
@@ -200,6 +443,17 @@ async function verifyGoogleToken(idToken: string): Promise<{
     );
     if (!resp.ok) return null;
     const data = await resp.json() as Record<string, string>;
+
+    // Validate audience — reject tokens not issued for our app
+    if (allowedClientIds.length > 0 && !allowedClientIds.includes(data.aud)) {
+      return null;
+    }
+
+    // Validate issuer
+    if (data.iss !== 'accounts.google.com' && data.iss !== 'https://accounts.google.com') {
+      return null;
+    }
+
     return {
       sub: data.sub,
       email: data.email || '',
