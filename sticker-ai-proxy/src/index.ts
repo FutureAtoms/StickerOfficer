@@ -5,6 +5,7 @@ import packs from './routes/packs';
 import challengeRoutes from './routes/challenges';
 import feedRoutes from './routes/feed';
 import generateRoutes from './routes/generate';
+import removeBgRoutes from './routes/removeBg';
 import moderation, { admin } from './routes/moderation';
 import profile from './routes/profile';
 
@@ -113,6 +114,9 @@ app.route('/feed', feedRoutes);
 
 // AI generation routes: POST /generate
 app.route('/generate', generateRoutes);
+
+// Background removal: POST /remove-bg
+app.route('/remove-bg', removeBgRoutes);
 
 // Moderation routes: /report, /block/:publicId
 app.route('/', moderation);

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import 'auth_service.dart';
@@ -126,6 +129,34 @@ class ApiClient {
 
   Future<void> acceptTerms() async {
     await _dio.post('/auth/accept-terms');
+  }
+
+  // Background Removal (server-side RMBG-2.0 via HuggingFace)
+  Future<Uint8List?> removeBackground(Uint8List imageBytes) async {
+    try {
+      final base64Image = base64Encode(imageBytes);
+      final r = await _dio.post(
+        '/remove-bg',
+        data: {'image': base64Image},
+        options: Options(
+          sendTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 60),
+        ),
+      );
+      final resultBase64 = r.data['image'] as String?;
+      if (resultBase64 == null) return null;
+      return base64Decode(resultBase64);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 503) {
+        // Model is loading — throw a specific message
+        throw Exception(
+          'AI model is warming up, please try again in a few seconds',
+        );
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
   }
 
   // Profile

@@ -416,15 +416,36 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                         'Background Removal',
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
+                      const SizedBox(height: 16),
+                      // Primary: AI-powered (server-side RMBG-2.0)
+                      BubblyButton(
+                        label: 'AI Remove Background',
+                        icon: Icons.auto_awesome_rounded,
+                        gradient: AppColors.primaryGradient,
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _removeBackgroundAI();
+                        },
+                      ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Adjust sensitivity for better results',
+                        'Best quality — uses AI on our servers',
                         style: TextStyle(
                           color: AppColors.textSecondary,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                       ),
                       const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'or use quick remove (works offline)',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
                           const Text(
@@ -455,11 +476,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
                       BubblyButton(
-                        label: 'Remove Background',
+                        label: 'Quick Remove',
                         icon: Icons.auto_fix_high_rounded,
-                        gradient: AppColors.primaryGradient,
+                        color: AppColors.textSecondary,
                         onPressed: () {
                           Navigator.pop(ctx);
                           _removeBackground(tolerance: tolerance.round());
@@ -563,6 +583,97 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Background removal failed: $e'),
+            backgroundColor: AppColors.coral,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    } finally {
+      ref.read(isProcessingProvider.notifier).state = false;
+    }
+  }
+
+  Future<void> _removeBackgroundAI() async {
+    final bitmap = _editableImage;
+    if (bitmap == null) return;
+
+    setState(() => _processingLabel = 'AI removing background...');
+    ref.read(isProcessingProvider.notifier).state = true;
+    HapticFeedback.mediumImpact();
+
+    try {
+      await Future<void>.delayed(Duration.zero);
+      _previousBgRemovalSnapshot = _captureSnapshot();
+      _pushUndoSnapshot();
+
+      // Resize if too large (max 1024px on longest side) to reduce upload
+      var sendBitmap = bitmap;
+      if (bitmap.width > 1024 || bitmap.height > 1024) {
+        final scale =
+            1024 /
+            (bitmap.width > bitmap.height ? bitmap.width : bitmap.height);
+        sendBitmap = img.copyResize(
+          bitmap,
+          width: (bitmap.width * scale).round(),
+          height: (bitmap.height * scale).round(),
+          interpolation: img.Interpolation.linear,
+        );
+      }
+
+      // Encode to PNG
+      final pngBytes = Uint8List.fromList(img.encodePng(sendBitmap));
+
+      // Call server-side RMBG-2.0
+      final apiClient = ref.read(apiClientProvider);
+      final resultBytes = await apiClient.removeBackground(pngBytes);
+
+      if (resultBytes == null) {
+        throw Exception('Server returned no result — try Quick Remove instead');
+      }
+
+      // Decode the result PNG
+      var resultImage = img.decodePng(resultBytes);
+      if (resultImage == null) {
+        throw Exception('Failed to decode result image');
+      }
+
+      // Resize back to original dimensions if we downscaled
+      if (resultImage.width != bitmap.width ||
+          resultImage.height != bitmap.height) {
+        resultImage = img.copyResize(
+          resultImage,
+          width: bitmap.width,
+          height: bitmap.height,
+          interpolation: img.Interpolation.linear,
+        );
+      }
+
+      await _replaceEditableImage(resultImage);
+
+      if (!mounted) return;
+
+      setState(() => _hasRemovedBg = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Background removed with AI!'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'AI removal failed: ${e.toString().split('\n').first}. '
+              'Try Quick Remove for offline use.',
+            ),
             backgroundColor: AppColors.coral,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
