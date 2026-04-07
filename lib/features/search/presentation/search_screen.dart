@@ -75,12 +75,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   decoration: InputDecoration(
                     hintText: 'Search stickers, packs, creators...',
                     prefixIcon: const Icon(Icons.search_rounded),
-                    suffixIcon: query.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded),
-                            onPressed: () => _setQuery(''),
-                          )
-                        : null,
+                    suffixIcon:
+                        query.isNotEmpty
+                            ? IconButton(
+                              icon: const Icon(Icons.clear_rounded),
+                              onPressed: () => _setQuery(''),
+                            )
+                            : null,
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 20,
@@ -228,11 +229,13 @@ class _CategoryBubble extends ConsumerWidget {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: isActive ? color.withValues(alpha: 0.25) : color.withValues(alpha: 0.12),
+                  color:
+                      isActive
+                          ? color.withValues(alpha: 0.25)
+                          : color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
-                  border: isActive
-                      ? Border.all(color: color, width: 2.5)
-                      : null,
+                  border:
+                      isActive ? Border.all(color: color, width: 2.5) : null,
                 ),
                 child: Icon(icon, color: color, size: 30),
               ),
@@ -283,13 +286,14 @@ class _TagChip extends ConsumerWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: isActive
-                ? AppColors.coral.withValues(alpha: 0.2)
-                : AppColors.pastels[tag.hashCode.abs() % AppColors.pastels.length],
+            color:
+                isActive
+                    ? AppColors.coral.withValues(alpha: 0.2)
+                    : AppColors.pastels[tag.hashCode.abs() %
+                        AppColors.pastels.length],
             borderRadius: BorderRadius.circular(16),
-            border: isActive
-                ? Border.all(color: AppColors.coral, width: 2)
-                : null,
+            border:
+                isActive ? Border.all(color: AppColors.coral, width: 2) : null,
           ),
           child: Text(
             tag,
@@ -313,12 +317,18 @@ class _PopularSection extends ConsumerWidget {
     final packsAsync = ref.watch(packsProvider);
 
     return packsAsync.when(
-      loading: () => const ShimmerSkeleton(itemCount: 4, layout: ShimmerLayout.grid),
-      error: (_, __) => Center(
+      loading:
+          () => const ShimmerSkeleton(itemCount: 4, layout: ShimmerLayout.grid),
+      error:
+          (_, __) => Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.error_outline_rounded, size: 48, color: AppColors.coral.withValues(alpha: 0.5)),
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: 48,
+                  color: AppColors.coral.withValues(alpha: 0.5),
+                ),
                 const SizedBox(height: 12),
                 const Text('Could not load packs'),
                 const SizedBox(height: 16),
@@ -328,7 +338,9 @@ class _PopularSection extends ConsumerWidget {
                   label: const Text('Retry'),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.coral,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
                 ),
               ],
@@ -343,7 +355,7 @@ class _PopularSection extends ConsumerWidget {
                 Icon(
                   Icons.search_off_rounded,
                   size: 64,
-                  color: AppColors.textSecondary.withValues(alpha:0.3),
+                  color: AppColors.textSecondary.withValues(alpha: 0.3),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -388,12 +400,18 @@ class _SearchResults extends ConsumerWidget {
     final resultsAsync = ref.watch(searchResultsProvider);
 
     return resultsAsync.when(
-      loading: () => const ShimmerSkeleton(itemCount: 4, layout: ShimmerLayout.grid),
-      error: (_, __) => Center(
+      loading:
+          () => const ShimmerSkeleton(itemCount: 4, layout: ShimmerLayout.grid),
+      error:
+          (_, __) => Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.error_outline_rounded, size: 48, color: AppColors.coral.withValues(alpha: 0.5)),
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: 48,
+                  color: AppColors.coral.withValues(alpha: 0.5),
+                ),
                 const SizedBox(height: 12),
                 const Text('Search failed'),
                 const SizedBox(height: 16),
@@ -403,7 +421,9 @@ class _SearchResults extends ConsumerWidget {
                   label: const Text('Retry'),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.coral,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
                 ),
               ],
@@ -419,7 +439,7 @@ class _SearchResults extends ConsumerWidget {
                 Icon(
                   Icons.search_rounded,
                   size: 64,
-                  color: AppColors.textSecondary.withValues(alpha:0.3),
+                  color: AppColors.textSecondary.withValues(alpha: 0.3),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -470,72 +490,75 @@ class _PackGridItem extends StatelessWidget {
             color: AppColors.pastels[index % AppColors.pastels.length],
             borderRadius: BorderRadius.circular(20),
           ),
-        child: Stack(
-          children: [
-            // Thumbnail fills the card
-            if (pack.stickerPaths.isNotEmpty)
-              Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.file(
-                    File(pack.stickerPaths.first),
-                    fit: BoxFit.contain,
-                    errorBuilder:
-                        (_, __, ___) => Center(
-                          child: Icon(
-                            Icons.emoji_emotions_rounded,
-                            size: 48,
-                            color: AppColors.coral.withValues(alpha: 0.3),
+          child: Stack(
+            children: [
+              // Thumbnail fills the card
+              if (pack.stickerPaths.isNotEmpty)
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.file(
+                      File(pack.stickerPaths.first),
+                      fit: BoxFit.contain,
+                      errorBuilder:
+                          (_, __, ___) => Center(
+                            child: Icon(
+                              Icons.emoji_emotions_rounded,
+                              size: 48,
+                              color: AppColors.coral.withValues(alpha: 0.3),
+                            ),
                           ),
-                        ),
+                    ),
+                  ),
+                )
+              else
+                Center(
+                  child: Icon(
+                    Icons.emoji_emotions_rounded,
+                    size: 48,
+                    color: AppColors.coral.withValues(alpha: 0.3),
                   ),
                 ),
-              )
-            else
-              Center(
-                child: Icon(
-                  Icons.emoji_emotions_rounded,
-                  size: 48,
-                  color: AppColors.coral.withValues(alpha: 0.3),
+              // Info overlay at bottom
+              Positioned(
+                left: 8,
+                right: 8,
+                bottom: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        pack.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                      Text(
+                        '${pack.stickerPaths.length} stickers',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            // Info overlay at bottom
-            Positioned(
-              left: 8,
-              right: 8,
-              bottom: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      pack.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                    Text(
-                      '${pack.stickerPaths.length} stickers',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
         ),
       ),
     );

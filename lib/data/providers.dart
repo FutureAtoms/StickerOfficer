@@ -419,8 +419,9 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 /// Auth state — the single source of truth for the current user's identity.
 /// Automatically registers anonymously on first launch, then preserves
 /// social sign-in state across app restarts.
-final authStateProvider =
-    AsyncNotifierProvider<AuthNotifier, AuthUser>(AuthNotifier.new);
+final authStateProvider = AsyncNotifierProvider<AuthNotifier, AuthUser>(
+  AuthNotifier.new,
+);
 
 class AuthNotifier extends AsyncNotifier<AuthUser> {
   AuthService get _auth => ref.read(authServiceProvider);
@@ -436,11 +437,19 @@ class AuthNotifier extends AsyncNotifier<AuthUser> {
     state = await AsyncValue.guard(() => _auth.signInWithGoogle(idToken));
   }
 
-  Future<void> signInWithApple(String identityToken,
-      {String? fullName, String? rawNonce}) async {
+  Future<void> signInWithApple(
+    String identityToken, {
+    String? fullName,
+    String? rawNonce,
+  }) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() =>
-        _auth.signInWithApple(identityToken, fullName: fullName, rawNonce: rawNonce));
+    state = await AsyncValue.guard(
+      () => _auth.signInWithApple(
+        identityToken,
+        fullName: fullName,
+        rawNonce: rawNonce,
+      ),
+    );
   }
 
   Future<void> disconnectProvider() async {

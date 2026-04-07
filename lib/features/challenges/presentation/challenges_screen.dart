@@ -36,47 +36,51 @@ class ChallengesScreen extends ConsumerWidget {
                       .inDays
                       .clamp(0, 999);
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Semantics(
-                      label:
-                          '${challenge.title}, ${challenge.isActive ? "$daysLeft days left" : "Voting"}, ${challenge.submissionCount} submissions',
-                      child: _ChallengeDetailCard(
-                        title: challenge.title,
-                        description: challenge.description,
-                        daysLeft: daysLeft,
-                        submissions: challenge.submissionCount,
-                        isActive: challenge.isActive,
-                      ),
-                    ),
-                  )
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Semantics(
+                          label:
+                              '${challenge.title}, ${challenge.isActive ? "$daysLeft days left" : "Voting"}, ${challenge.submissionCount} submissions',
+                          child: _ChallengeDetailCard(
+                            title: challenge.title,
+                            description: challenge.description,
+                            daysLeft: daysLeft,
+                            submissions: challenge.submissionCount,
+                            isActive: challenge.isActive,
+                          ),
+                        ),
+                      )
                       .animate()
                       .fadeIn(duration: 500.ms, delay: (i * 120).ms)
                       .slideY(
-                          begin: 0.2,
-                          end: 0,
-                          duration: 500.ms,
-                          delay: (i * 120).ms,
-                          curve: Curves.easeOutCubic);
+                        begin: 0.2,
+                        end: 0,
+                        duration: 500.ms,
+                        delay: (i * 120).ms,
+                        curve: Curves.easeOutCubic,
+                      );
                 }),
               ],
               if (pastChallenges.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text('Past Challenges',
-                    style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Past Challenges',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 12),
                 ...pastChallenges.asMap().entries.map(
                   (entry) => _PastChallengeItem(
-                    title: entry.value.title,
-                    winner: entry.value.winnerName ?? 'TBD',
-                    submissions: entry.value.submissionCount,
-                  )
+                        title: entry.value.title,
+                        winner: entry.value.winnerName ?? 'TBD',
+                        submissions: entry.value.submissionCount,
+                      )
                       .animate()
                       .fadeIn(duration: 400.ms, delay: (entry.key * 80).ms)
                       .slideX(
-                          begin: -0.1,
-                          end: 0,
-                          duration: 400.ms,
-                          delay: (entry.key * 80).ms),
+                        begin: -0.1,
+                        end: 0,
+                        duration: 400.ms,
+                        delay: (entry.key * 80).ms,
+                      ),
                 ),
               ],
             ],
@@ -91,15 +95,18 @@ class ChallengesScreen extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.emoji_events_rounded,
-              size: 64,
-              color: AppColors.textSecondary.withValues(alpha: 0.3)),
+          Icon(
+            Icons.emoji_events_rounded,
+            size: 64,
+            color: AppColors.textSecondary.withValues(alpha: 0.3),
+          ),
           const SizedBox(height: 16),
-          Text('No challenges available right now',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyLarge
-                  ?.copyWith(color: AppColors.textSecondary)),
+          Text(
+            'No challenges available right now',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
+          ),
         ],
       ),
     );
@@ -134,7 +141,7 @@ class _ChallengeDetailCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppColors.coral.withValues(alpha:0.3),
+            color: AppColors.coral.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -167,7 +174,7 @@ class _ChallengeDetailCard extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha:0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(
@@ -184,7 +191,7 @@ class _ChallengeDetailCard extends StatelessWidget {
           Text(
             description,
             style: TextStyle(
-              color: Colors.white.withValues(alpha:0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               fontSize: 15,
               height: 1.4,
             ),
@@ -195,7 +202,7 @@ class _ChallengeDetailCard extends StatelessWidget {
               Text(
                 '$submissions submissions',
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha:0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 14,
                 ),
               ),
@@ -267,7 +274,7 @@ class _PastChallengeItem extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha:0.1),
+                    color: Colors.amber.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(

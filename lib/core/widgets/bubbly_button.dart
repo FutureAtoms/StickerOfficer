@@ -69,62 +69,62 @@ class _BubblyButtonState extends State<BubblyButton>
         },
         onTapCancel: () => _controller.reverse(),
         child: _ScaleBuilder(
-        listenable: _scale,
-        builder:
-            (context, child) =>
-                Transform.scale(scale: _scale.value, child: child),
-        child: Container(
-          height: widget.height,
-          decoration: BoxDecoration(
-            color: widget.gradient == null ? buttonColor : null,
-            gradient: widget.gradient,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: buttonColor.withValues(alpha:0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Center(
-            child:
-                widget.isLoading
-                    ? SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: widget.textColor ?? Colors.white,
-                      ),
-                    )
-                    : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (widget.icon != null) ...[
-                          Icon(
-                            widget.icon,
-                            color: widget.textColor ?? Colors.white,
-                            size: 22,
-                          ),
-                          const SizedBox(width: 10),
-                        ],
-                        Flexible(
-                          child: Text(
-                            widget.label,
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: widget.textColor ?? Colors.white,
-                              fontSize: 16,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
+          listenable: _scale,
+          builder:
+              (context, child) =>
+                  Transform.scale(scale: _scale.value, child: child),
+          child: Container(
+            height: widget.height,
+            decoration: BoxDecoration(
+              color: widget.gradient == null ? buttonColor : null,
+              gradient: widget.gradient,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: buttonColor.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Center(
+              child:
+                  widget.isLoading
+                      ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: widget.textColor ?? Colors.white,
                         ),
-                      ],
-                    ),
+                      )
+                      : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (widget.icon != null) ...[
+                            Icon(
+                              widget.icon,
+                              color: widget.textColor ?? Colors.white,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 10),
+                          ],
+                          Flexible(
+                            child: Text(
+                              widget.label,
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: widget.textColor ?? Colors.white,
+                                fontSize: 16,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+            ),
           ),
         ),
-      ),
       ),
     );
   }

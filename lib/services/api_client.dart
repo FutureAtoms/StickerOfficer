@@ -7,29 +7,31 @@ class ApiClient {
   final AuthService _authService;
 
   ApiClient({required String baseUrl, required AuthService authService})
-      : _authService = authService,
-        _dio = Dio(BaseOptions(baseUrl: baseUrl)) {
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = await _authService.getToken();
-        options.headers['Authorization'] = 'Bearer $token';
-        handler.next(options);
-      },
-      onError: (error, handler) async {
-        if (error.response?.statusCode == 401) {
-          try {
-            final newToken = await _authService.refreshToken();
-            final opts = error.requestOptions;
-            opts.headers['Authorization'] = 'Bearer $newToken';
-            final response = await _dio.fetch(opts);
-            return handler.resolve(response);
-          } catch (_) {
-            return handler.next(error);
+    : _authService = authService,
+      _dio = Dio(BaseOptions(baseUrl: baseUrl)) {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          final token = await _authService.getToken();
+          options.headers['Authorization'] = 'Bearer $token';
+          handler.next(options);
+        },
+        onError: (error, handler) async {
+          if (error.response?.statusCode == 401) {
+            try {
+              final newToken = await _authService.refreshToken();
+              final opts = error.requestOptions;
+              opts.headers['Authorization'] = 'Bearer $newToken';
+              final response = await _dio.fetch(opts);
+              return handler.resolve(response);
+            } catch (_) {
+              return handler.next(error);
+            }
           }
-        }
-        handler.next(error);
-      },
-    ));
+          handler.next(error);
+        },
+      ),
+    );
   }
 
   // Feed
@@ -50,12 +52,15 @@ class ApiClient {
     required List<String> tags,
     required List<Map<String, String>> stickers,
   }) async {
-    final r = await _dio.post('/packs', data: {
-      'name': name,
-      'category': category,
-      'tags': tags,
-      'stickers': stickers,
-    });
+    final r = await _dio.post(
+      '/packs',
+      data: {
+        'name': name,
+        'category': category,
+        'tags': tags,
+        'stickers': stickers,
+      },
+    );
     return r.data as Map<String, dynamic>;
   }
 
@@ -79,9 +84,10 @@ class ApiClient {
     required String challengeId,
     required String packId,
   }) async {
-    final r = await _dio.post('/challenges/$challengeId/submit', data: {
-      'pack_id': packId,
-    });
+    final r = await _dio.post(
+      '/challenges/$challengeId/submit',
+      data: {'pack_id': packId},
+    );
     return r.data as Map<String, dynamic>;
   }
 
@@ -89,9 +95,10 @@ class ApiClient {
     required String challengeId,
     required String submissionId,
   }) async {
-    final r = await _dio.post('/challenges/$challengeId/vote', data: {
-      'submission_id': submissionId,
-    });
+    final r = await _dio.post(
+      '/challenges/$challengeId/vote',
+      data: {'submission_id': submissionId},
+    );
     return r.data as Map<String, dynamic>;
   }
 
@@ -102,12 +109,15 @@ class ApiClient {
     required String reason,
     String? details,
   }) async {
-    await _dio.post('/report', data: {
-      'target_type': targetType,
-      'target_id': targetId,
-      'reason': reason,
-      if (details != null) 'details': details,
-    });
+    await _dio.post(
+      '/report',
+      data: {
+        'target_type': targetType,
+        'target_id': targetId,
+        'reason': reason,
+        if (details != null) 'details': details,
+      },
+    );
   }
 
   Future<void> blockUser(String publicId) async {

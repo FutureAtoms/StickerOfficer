@@ -217,7 +217,7 @@ class _CreateOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: color.withValues(alpha:0.1),
+      color: color.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -283,9 +283,15 @@ class _NavItem extends StatelessWidget {
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: isActive ? AppColors.coral.withValues(alpha: 0.12) : Colors.transparent,
+                  color:
+                      isActive
+                          ? AppColors.coral.withValues(alpha: 0.12)
+                          : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(

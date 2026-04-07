@@ -39,8 +39,8 @@ class BulkEditQueue {
   int _currentIndex;
 
   BulkEditQueue(List<String> paths)
-      : _items = paths.map((p) => BulkEditItem(originalPath: p)).toList(),
-        _currentIndex = 0;
+    : _items = paths.map((p) => BulkEditItem(originalPath: p)).toList(),
+      _currentIndex = 0;
 
   /// All items in the queue.
   List<BulkEditItem> get items => List.unmodifiable(_items);
@@ -52,15 +52,13 @@ class BulkEditQueue {
   bool get isComplete => _currentIndex >= _items.length;
 
   /// The current item, or null if complete.
-  BulkEditItem? get currentItem =>
-      isComplete ? null : _items[_currentIndex];
+  BulkEditItem? get currentItem => isComplete ? null : _items[_currentIndex];
 
   /// Current position (0-based).
   int get currentIndex => _currentIndex;
 
   /// Number of remaining (unprocessed) items.
-  int get remaining =>
-      _items.length - _currentIndex;
+  int get remaining => _items.length - _currentIndex;
 
   /// Count of items with a specific status.
   int countByStatus(BulkEditItemStatus status) =>

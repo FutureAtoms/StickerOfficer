@@ -30,9 +30,19 @@ img.Image applyFilter(img.Image source, StickerFilter filter) {
     case StickerFilter.vintage:
       return _applyVintage(source);
     case StickerFilter.cool:
-      return _applyColorShift(source, redShift: -10, greenShift: 0, blueShift: 20);
+      return _applyColorShift(
+        source,
+        redShift: -10,
+        greenShift: 0,
+        blueShift: 20,
+      );
     case StickerFilter.warm:
-      return _applyColorShift(source, redShift: 20, greenShift: 10, blueShift: -15);
+      return _applyColorShift(
+        source,
+        redShift: 20,
+        greenShift: 10,
+        blueShift: -15,
+      );
   }
 }
 
@@ -69,7 +79,8 @@ img.Image _applyVintage(img.Image source) {
   return result;
 }
 
-img.Image _applyColorShift(img.Image source, {
+img.Image _applyColorShift(
+  img.Image source, {
   required int redShift,
   required int greenShift,
   required int blueShift,

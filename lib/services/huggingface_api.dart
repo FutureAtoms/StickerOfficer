@@ -14,14 +14,15 @@ class HuggingFaceApiService {
   final Dio _dio;
 
   HuggingFaceApiService({Dio? dio, String? baseUrl})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: baseUrl ?? _defaultBaseUrl,
-                connectTimeout: const Duration(seconds: 30),
-                receiveTimeout: const Duration(seconds: 120),
-              ),
-            );
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              baseUrl: baseUrl ?? _defaultBaseUrl,
+              connectTimeout: const Duration(seconds: 30),
+              receiveTimeout: const Duration(seconds: 120),
+            ),
+          );
 
   /// Generate sticker images from a text prompt via Worker proxy.
   /// Returns base64-decoded images as Uint8List.
@@ -49,9 +50,7 @@ class HuggingFaceApiService {
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         final images = (data['images'] as List<dynamic>?) ?? [];
-        return images
-            .map((b64) => base64Decode(b64 as String))
-            .toList();
+        return images.map((b64) => base64Decode(b64 as String)).toList();
       }
     } catch (e) {
       // Generation failed — return empty

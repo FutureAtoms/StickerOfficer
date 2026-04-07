@@ -139,7 +139,8 @@ class _StickerGrid extends ConsumerWidget {
     final packsAsync = ref.watch(packsProvider);
 
     return packsAsync.when(
-      loading: () => const ShimmerSkeleton(itemCount: 6, layout: ShimmerLayout.grid),
+      loading:
+          () => const ShimmerSkeleton(itemCount: 6, layout: ShimmerLayout.grid),
       error:
           (error, _) => Center(
             child: Column(
@@ -148,7 +149,7 @@ class _StickerGrid extends ConsumerWidget {
                 Icon(
                   Icons.error_outline_rounded,
                   size: 48,
-                  color: AppColors.coral.withValues(alpha:0.5),
+                  color: AppColors.coral.withValues(alpha: 0.5),
                 ),
                 const SizedBox(height: 12),
                 Text(
@@ -194,124 +195,137 @@ class _StickerGrid extends ConsumerWidget {
           child: MasonryGridView.count(
             crossAxisCount: 2,
             mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: sorted.length,
-          itemBuilder: (context, index) {
-            final pack = sorted[index];
-            final colorIndex = index % AppColors.pastels.length;
-            final height = (index % 3 == 0) ? 220.0 : 180.0;
+            crossAxisSpacing: 12,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: sorted.length,
+            itemBuilder: (context, index) {
+              final pack = sorted[index];
+              final colorIndex = index % AppColors.pastels.length;
+              final height = (index % 3 == 0) ? 220.0 : 180.0;
 
-            return Semantics(
-              button: true,
-              label: '${pack.name}, ${pack.stickerPaths.length} stickers, ${pack.likeCount} likes',
-              child: GestureDetector(
-                onTap: () => context.push('/pack/${pack.id}'),
-                child: Hero(
-                  tag: 'pack-${pack.id}',
-                  child: Container(
-                    height: height,
-                    decoration: BoxDecoration(
-                      color: AppColors.pastels[colorIndex],
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: AppColors.shadowLight,
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        // Sticker thumbnail fills the tile
-                        Positioned.fill(
-                          child:
-                              pack.stickerPaths.isNotEmpty
-                                  ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: Image.file(
-                                      File(pack.stickerPaths.first),
-                                      fit: BoxFit.contain,
-                                      errorBuilder:
-                                          (_, __, ___) => Icon(
+              return Semantics(
+                    button: true,
+                    label:
+                        '${pack.name}, ${pack.stickerPaths.length} stickers, ${pack.likeCount} likes',
+                    child: GestureDetector(
+                      onTap: () => context.push('/pack/${pack.id}'),
+                      child: Hero(
+                        tag: 'pack-${pack.id}',
+                        child: Container(
+                          height: height,
+                          decoration: BoxDecoration(
+                            color: AppColors.pastels[colorIndex],
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: AppColors.shadowLight,
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Stack(
+                            children: [
+                              // Sticker thumbnail fills the tile
+                              Positioned.fill(
+                                child:
+                                    pack.stickerPaths.isNotEmpty
+                                        ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                          child: Image.file(
+                                            File(pack.stickerPaths.first),
+                                            fit: BoxFit.contain,
+                                            errorBuilder:
+                                                (_, __, ___) => Icon(
+                                                  Icons.emoji_emotions_rounded,
+                                                  size: 48,
+                                                  color: AppColors.coral
+                                                      .withValues(alpha: 0.3),
+                                                ),
+                                          ),
+                                        )
+                                        : Center(
+                                          child: Icon(
                                             Icons.emoji_emotions_rounded,
                                             size: 48,
-                                            color: AppColors.coral.withValues(alpha:0.3),
+                                            color: AppColors.coral.withValues(
+                                              alpha: 0.3,
+                                            ),
                                           ),
-                                    ),
-                                  )
-                                  : Center(
-                                    child: Icon(
-                                      Icons.emoji_emotions_rounded,
-                                      size: 48,
-                                      color: AppColors.coral.withValues(alpha:0.3),
-                                    ),
+                                        ),
+                              ),
+                              // Info overlay
+                              Positioned(
+                                left: 12,
+                                right: 12,
+                                bottom: 12,
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                        ),
-                        // Info overlay
-                        Positioned(
-                          left: 12,
-                          right: 12,
-                          bottom: 12,
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha:0.9),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  pack.name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        pack.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            '${pack.stickerPaths.length} stickers',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          const Icon(
+                                            Icons.favorite_rounded,
+                                            size: 12,
+                                            color: AppColors.coral,
+                                          ),
+                                          const SizedBox(width: 2),
+                                          Text(
+                                            '${pack.likeCount}',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    Text(
-                                      '${pack.stickerPaths.length} stickers',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    const Icon(
-                                      Icons.favorite_rounded,
-                                      size: 12,
-                                      color: AppColors.coral,
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      '${pack.likeCount}',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ),
-            )
-            .animate()
-            .fadeIn(duration: 400.ms, delay: (index * 80).ms)
-            .slideY(begin: 0.15, end: 0, duration: 400.ms, delay: (index * 80).ms, curve: Curves.easeOutCubic);
-          },
+                  )
+                  .animate()
+                  .fadeIn(duration: 400.ms, delay: (index * 80).ms)
+                  .slideY(
+                    begin: 0.15,
+                    end: 0,
+                    duration: 400.ms,
+                    delay: (index * 80).ms,
+                    curve: Curves.easeOutCubic,
+                  );
+            },
           ),
         );
       },
@@ -333,7 +347,7 @@ class _EmptyFeedState extends StatelessWidget {
             Icon(
               Icons.auto_awesome_rounded,
               size: 72,
-              color: AppColors.purple.withValues(alpha:0.4),
+              color: AppColors.purple.withValues(alpha: 0.4),
             ),
             const SizedBox(height: 20),
             Text(
@@ -363,7 +377,7 @@ class _EmptyFeedState extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.coral.withValues(alpha:0.3),
+                      color: AppColors.coral.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -436,10 +450,9 @@ class _ChallengesTab extends ConsumerWidget {
           const SizedBox(height: 16),
           Text(
             'No challenges yet',
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(color: AppColors.textSecondary),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -466,9 +479,10 @@ class _ChallengeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusLabel = isActive
-        ? (daysLeft > 0 ? '$daysLeft days left' : 'Last day!')
-        : 'Voting';
+    final statusLabel =
+        isActive
+            ? (daysLeft > 0 ? '$daysLeft days left' : 'Last day!')
+            : 'Voting';
 
     return GestureDetector(
       onTap: () => context.push('/challenges'),
@@ -476,14 +490,14 @@ class _ChallengeCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [color, color.withValues(alpha:0.7)],
+            colors: [color, color.withValues(alpha: 0.7)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha:0.3),
+              color: color.withValues(alpha: 0.3),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -500,7 +514,7 @@ class _ChallengeCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha:0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -533,7 +547,7 @@ class _ChallengeCard extends StatelessWidget {
             Text(
               description,
               style: TextStyle(
-                color: Colors.white.withValues(alpha:0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 14,
               ),
             ),
@@ -543,7 +557,7 @@ class _ChallengeCard extends StatelessWidget {
                 Text(
                   '$submissions submissions',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha:0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 13,
                   ),
                 ),

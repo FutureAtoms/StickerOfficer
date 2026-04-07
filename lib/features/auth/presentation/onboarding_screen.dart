@@ -102,29 +102,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child:
                   _currentPage == _pages.length - 1
                       ? Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            BubblyButton(
-                              label: 'Get Started',
-                              gradient: AppColors.primaryGradient,
-                              onPressed: () => _finishOnboarding(),
-                            ),
-                            const SizedBox(height: 12),
-                            TextButton(
-                              onPressed: () {
-                                _finishOnboarding();
-                                context.push('/login');
-                              },
-                              child: const Text(
-                                'or sign in with Google / Apple',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 14,
-                                ),
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          BubblyButton(
+                            label: 'Get Started',
+                            gradient: AppColors.primaryGradient,
+                            onPressed: () => _finishOnboarding(),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: () {
+                              _finishOnboarding();
+                              context.push('/login');
+                            },
+                            child: const Text(
+                              'or sign in with Google / Apple',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 14,
                               ),
                             ),
-                          ],
-                        )
+                          ),
+                        ],
+                      )
                       : BubblyButton(
                         label: 'Next',
                         color: AppColors.coral,
@@ -166,39 +166,44 @@ class _OnboardingPage extends StatelessWidget {
         children: [
           // Animated icon container
           Container(
-            width: 140,
-            height: 140,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 64, color: color),
-          )
-          .animate(onPlay: (c) => c.repeat(reverse: true))
-          .scaleXY(begin: 1.0, end: 1.08, duration: 2000.ms, curve: Curves.easeInOut),
+                width: 140,
+                height: 140,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 64, color: color),
+              )
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .scaleXY(
+                begin: 1.0,
+                end: 1.08,
+                duration: 2000.ms,
+                curve: Curves.easeInOut,
+              ),
           const SizedBox(height: 40),
           Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.displayLarge?.copyWith(color: color),
-            textAlign: TextAlign.center,
-          )
-          .animate()
-          .fadeIn(duration: 600.ms, delay: 200.ms)
-          .slideY(begin: 0.3, end: 0, duration: 600.ms, delay: 200.ms),
+                title,
+                style: Theme.of(
+                  context,
+                ).textTheme.displayLarge?.copyWith(color: color),
+                textAlign: TextAlign.center,
+              )
+              .animate()
+              .fadeIn(duration: 600.ms, delay: 200.ms)
+              .slideY(begin: 0.3, end: 0, duration: 600.ms, delay: 200.ms),
           const SizedBox(height: 16),
           Text(
-            description,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: AppColors.textSecondary,
-              height: 1.6,
-            ),
-            textAlign: TextAlign.center,
-          )
-          .animate()
-          .fadeIn(duration: 600.ms, delay: 400.ms)
-          .slideY(begin: 0.3, end: 0, duration: 600.ms, delay: 400.ms),
+                description,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.6,
+                ),
+                textAlign: TextAlign.center,
+              )
+              .animate()
+              .fadeIn(duration: 600.ms, delay: 400.ms)
+              .slideY(begin: 0.3, end: 0, duration: 600.ms, delay: 400.ms),
         ],
       ),
     );

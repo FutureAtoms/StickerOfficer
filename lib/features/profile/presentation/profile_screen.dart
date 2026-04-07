@@ -20,10 +20,20 @@ class ProfileScreen extends ConsumerWidget {
 
     final stats = statsAsync.when(
       data: (s) => s,
-      loading: () => const UserStats(
-          packCount: 0, totalStickers: 0, totalLikes: 0, totalDownloads: 0),
-      error: (_, __) => const UserStats(
-          packCount: 0, totalStickers: 0, totalLikes: 0, totalDownloads: 0),
+      loading:
+          () => const UserStats(
+            packCount: 0,
+            totalStickers: 0,
+            totalLikes: 0,
+            totalDownloads: 0,
+          ),
+      error:
+          (_, __) => const UserStats(
+            packCount: 0,
+            totalStickers: 0,
+            totalLikes: 0,
+            totalDownloads: 0,
+          ),
     );
     final publicId = authUser?.publicId;
 
@@ -36,75 +46,92 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               // Avatar
               Semantics(
-                label: 'Profile avatar',
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    gradient: authUser?.photoUrl != null
-                        ? null
-                        : AppColors.primaryGradient,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.coral.withValues(alpha: 0.3),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
+                    label: 'Profile avatar',
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        gradient:
+                            authUser?.photoUrl != null
+                                ? null
+                                : AppColors.primaryGradient,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.coral.withValues(alpha: 0.3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: authUser?.photoUrl != null && authUser!.photoUrl!.isNotEmpty
-                      ? ClipOval(
-                          child: Image.network(
-                            authUser.photoUrl!,
-                            width: 100,
-                            height: 100,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
+                      child:
+                          authUser?.photoUrl != null &&
+                                  authUser!.photoUrl!.isNotEmpty
+                              ? ClipOval(
+                                child: Image.network(
+                                  authUser.photoUrl!,
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (_, __, ___) => const Icon(
+                                        Icons.person_rounded,
+                                        size: 48,
+                                        color: Colors.white,
+                                      ),
+                                ),
+                              )
+                              : const Icon(
                                 Icons.person_rounded,
                                 size: 48,
-                                color: Colors.white),
-                          ),
-                        )
-                      : const Icon(Icons.person_rounded,
-                          size: 48, color: Colors.white),
-                ),
-              )
+                                color: Colors.white,
+                              ),
+                    ),
+                  )
                   .animate()
                   .fadeIn(duration: 600.ms)
                   .scale(
-                      begin: const Offset(0.8, 0.8),
-                      end: const Offset(1, 1),
-                      duration: 600.ms,
-                      curve: Curves.easeOutBack),
+                    begin: const Offset(0.8, 0.8),
+                    end: const Offset(1, 1),
+                    duration: 600.ms,
+                    curve: Curves.easeOutBack,
+                  ),
               const SizedBox(height: 16),
               Text(
-                  authUser?.displayName?.isNotEmpty == true
-                      ? authUser!.displayName!
-                      : 'Sticker Creator',
-                  style: Theme.of(context).textTheme.headlineMedium),
+                authUser?.displayName?.isNotEmpty == true
+                    ? authUser!.displayName!
+                    : 'Sticker Creator',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
               const SizedBox(height: 4),
               if (publicId != null)
                 GestureDetector(
                   onTap: () {
                     Clipboard.setData(ClipboardData(text: publicId));
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: const Text('ID copied to clipboard'),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('ID copied to clipboard'),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    );
                   },
-                  child: Text('@$publicId',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textSecondary)),
+                  child: Text(
+                    '@$publicId',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 )
               else
-                Text('@stickermaker',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: AppColors.textSecondary)),
+                Text(
+                  '@stickermaker',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
               const SizedBox(height: 24),
               // Stats
               Row(
@@ -128,109 +155,128 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: 32),
               // Settings section
               _SettingsSection(
-                items: [
-                  // Sign In / Disconnect account
-                  if (authUser == null || authUser.isAnonymous)
-                    _SettingsItem(
-                      icon: Icons.login_rounded,
-                      label: 'Sign In',
-                      color: AppColors.teal,
-                      onTap: () => context.push('/login'),
-                    )
-                  else
-                    _SettingsItem(
-                      icon: Icons.link_off_rounded,
-                      label: 'Disconnect ${authUser.method.name[0].toUpperCase()}${authUser.method.name.substring(1)}',
-                      color: AppColors.coral,
-                      onTap: () async {
-                        final shouldDisconnect = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            title: const Text('Disconnect Account'),
-                            content: const Text(
-                              'This will disconnect your social account. '
-                              'Your stickers and data will be kept.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(ctx).pop(false),
-                                child: const Text('Cancel'),
+                    items: [
+                      // Sign In / Disconnect account
+                      if (authUser == null || authUser.isAnonymous)
+                        _SettingsItem(
+                          icon: Icons.login_rounded,
+                          label: 'Sign In',
+                          color: AppColors.teal,
+                          onTap: () => context.push('/login'),
+                        )
+                      else
+                        _SettingsItem(
+                          icon: Icons.link_off_rounded,
+                          label:
+                              'Disconnect ${authUser.method.name[0].toUpperCase()}${authUser.method.name.substring(1)}',
+                          color: AppColors.coral,
+                          onTap: () async {
+                            final shouldDisconnect = await showDialog<bool>(
+                              context: context,
+                              builder:
+                                  (ctx) => AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    title: const Text('Disconnect Account'),
+                                    content: const Text(
+                                      'This will disconnect your social account. '
+                                      'Your stickers and data will be kept.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed:
+                                            () => Navigator.of(ctx).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed:
+                                            () => Navigator.of(ctx).pop(true),
+                                        child: const Text(
+                                          'Disconnect',
+                                          style: TextStyle(
+                                            color: AppColors.coral,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                            );
+                            if (shouldDisconnect == true) {
+                              ref
+                                  .read(authStateProvider.notifier)
+                                  .disconnectProvider();
+                            }
+                          },
+                        ),
+                      _SettingsItem(
+                        icon: Icons.palette_rounded,
+                        label: 'Theme',
+                        color: AppColors.purple,
+                        onTap: () => showThemePickerSheet(context),
+                      ),
+                      _SettingsItem(
+                        icon: Icons.privacy_tip_rounded,
+                        label: 'Privacy Policy',
+                        color: Colors.blue,
+                        onTap:
+                            () => launchUrl(
+                              Uri.parse(
+                                'https://sticker-officer-api.ceofutureatoms.workers.dev/legal/privacy',
                               ),
-                              TextButton(
-                                onPressed: () => Navigator.of(ctx).pop(true),
-                                child: const Text(
-                                  'Disconnect',
-                                  style: TextStyle(color: AppColors.coral),
-                                ),
+                            ),
+                      ),
+                      _SettingsItem(
+                        icon: Icons.description_rounded,
+                        label: 'Terms of Service',
+                        color: AppColors.purple,
+                        onTap:
+                            () => launchUrl(
+                              Uri.parse(
+                                'https://sticker-officer-api.ceofutureatoms.workers.dev/legal/terms',
                               ),
-                            ],
-                          ),
-                        );
-                        if (shouldDisconnect == true) {
-                          ref.read(authStateProvider.notifier).disconnectProvider();
-                        }
-                      },
-                    ),
-                  _SettingsItem(
-                    icon: Icons.palette_rounded,
-                    label: 'Theme',
-                    color: AppColors.purple,
-                    onTap: () => showThemePickerSheet(context),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.privacy_tip_rounded,
-                    label: 'Privacy Policy',
-                    color: Colors.blue,
-                    onTap: () => launchUrl(Uri.parse(
-                        'https://sticker-officer-api.ceofutureatoms.workers.dev/legal/privacy')),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.description_rounded,
-                    label: 'Terms of Service',
-                    color: AppColors.purple,
-                    onTap: () => launchUrl(Uri.parse(
-                        'https://sticker-officer-api.ceofutureatoms.workers.dev/legal/terms')),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.help_rounded,
-                    label: 'Contact Support',
-                    color: Colors.orange,
-                    onTap: () => launchUrl(
-                        Uri.parse('mailto:support@futureatoms.com')),
-                  ),
-                  _SettingsItem(
-                    icon: Icons.info_rounded,
-                    label: 'About StickerOfficer',
-                    color: AppColors.textSecondary,
-                    onTap: () {
-                      showAboutDialog(
-                        context: context,
-                        applicationName: 'StickerOfficer',
-                        applicationVersion: '1.0.0',
-                        applicationLegalese:
-                            '© 2026 Future Atoms. All rights reserved.',
-                      );
-                    },
-                  ),
-                  _SettingsItem(
-                    icon: Icons.flag_rounded,
-                    label: 'Report an Issue',
-                    color: AppColors.coral,
-                    onTap: () => ReportButton.showReportSheet(
-                      context: context,
-                      ref: ref,
-                      targetType: 'app',
-                      targetId: publicId ?? 'unknown',
-                    ),
-                  ),
-                ],
-              )
-              .animate()
-              .fadeIn(duration: 500.ms, delay: 300.ms)
-              .slideY(begin: 0.15, end: 0, duration: 500.ms, delay: 300.ms),
+                            ),
+                      ),
+                      _SettingsItem(
+                        icon: Icons.help_rounded,
+                        label: 'Contact Support',
+                        color: Colors.orange,
+                        onTap:
+                            () => launchUrl(
+                              Uri.parse('mailto:support@futureatoms.com'),
+                            ),
+                      ),
+                      _SettingsItem(
+                        icon: Icons.info_rounded,
+                        label: 'About StickerOfficer',
+                        color: AppColors.textSecondary,
+                        onTap: () {
+                          showAboutDialog(
+                            context: context,
+                            applicationName: 'StickerOfficer',
+                            applicationVersion: '1.0.0',
+                            applicationLegalese:
+                                '© 2026 Future Atoms. All rights reserved.',
+                          );
+                        },
+                      ),
+                      _SettingsItem(
+                        icon: Icons.flag_rounded,
+                        label: 'Report an Issue',
+                        color: AppColors.coral,
+                        onTap:
+                            () => ReportButton.showReportSheet(
+                              context: context,
+                              ref: ref,
+                              targetType: 'app',
+                              targetId: publicId ?? 'unknown',
+                            ),
+                      ),
+                    ],
+                  )
+                  .animate()
+                  .fadeIn(duration: 500.ms, delay: 300.ms)
+                  .slideY(begin: 0.15, end: 0, duration: 500.ms, delay: 300.ms),
               const SizedBox(height: 32),
             ],
           ),
@@ -272,7 +318,10 @@ class _ProfileStat extends StatelessWidget {
               builder: (context, animatedValue, _) {
                 return Text(
                   '$animatedValue$suffix',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                  ),
                 );
               },
             )
@@ -284,7 +333,10 @@ class _ProfileStat extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),

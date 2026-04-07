@@ -120,8 +120,10 @@ class StickerThemeData {
           borderRadius: BorderRadius.circular(cardRadius),
           borderSide: BorderSide.none,
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: isDark ? cardColor : Colors.white,
@@ -138,9 +140,7 @@ class StickerThemeData {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: seedColor.withValues(alpha: isDark ? 0.2 : 0.1),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       bottomSheetTheme: BottomSheetThemeData(
@@ -154,9 +154,7 @@ class StickerThemeData {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       dialogTheme: DialogTheme(
         shape: RoundedRectangleBorder(

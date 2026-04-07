@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="fastlane.lanes">
+    
+    
+    
+      
+      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000224">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="1: Switch to android build lane" time="6.7e-05">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="2: cd .. &amp;&amp; flutter build appbundle --release" time="4.445231">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="3: upload_to_play_store" time="83.475433">
+        
+      </testcase>
+    
+  </testsuite>
+</testsuites>

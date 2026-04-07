@@ -92,11 +92,10 @@ class WhatsAppStickerChannel {
     if (!Platform.isAndroid) return false;
 
     try {
-      final result = await _channel.invokeMethod<bool>('encodeStaticWebpFrame', {
-        'inputPath': inputPath,
-        'outputPath': outputPath,
-        'quality': quality,
-      });
+      final result = await _channel.invokeMethod<bool>(
+        'encodeStaticWebpFrame',
+        {'inputPath': inputPath, 'outputPath': outputPath, 'quality': quality},
+      );
       return result ?? false;
     } on PlatformException catch (e) {
       debugPrint('Static WebP frame encode error: ${e.message}');

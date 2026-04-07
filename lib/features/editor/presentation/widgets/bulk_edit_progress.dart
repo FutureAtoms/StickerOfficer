@@ -39,18 +39,16 @@ class BulkEditProgress extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                queue.isComplete
-                    ? 'All done!'
-                    : 'Editing $current of $total',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                queue.isComplete ? 'All done!' : 'Editing $current of $total',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               Text(
                 '${queue.savedCount} saved',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -114,10 +112,11 @@ class _ThumbnailChip extends StatelessWidget {
             Image.file(
               File(item.originalPath),
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: AppColors.pastels[0],
-                child: const Icon(Icons.image, size: 20),
-              ),
+              errorBuilder:
+                  (_, __, ___) => Container(
+                    color: AppColors.pastels[0],
+                    child: const Icon(Icons.image, size: 20),
+                  ),
             ),
             // Status overlay
             if (item.status != BulkEditItemStatus.pending)
@@ -149,7 +148,11 @@ class _ThumbnailChip extends StatelessWidget {
       case BulkEditItemStatus.edited:
         return const Icon(Icons.check_rounded, color: Colors.white, size: 20);
       case BulkEditItemStatus.skipped:
-        return const Icon(Icons.skip_next_rounded, color: Colors.white, size: 20);
+        return const Icon(
+          Icons.skip_next_rounded,
+          color: Colors.white,
+          size: 20,
+        );
       case BulkEditItemStatus.removed:
         return const Icon(Icons.close_rounded, color: Colors.white, size: 20);
       case BulkEditItemStatus.pending:

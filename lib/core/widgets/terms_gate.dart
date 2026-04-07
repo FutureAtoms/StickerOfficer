@@ -50,13 +50,16 @@ class _TermsDialog extends StatelessWidget {
             ),
             SizedBox(height: 12),
             _BulletPoint('You own or have rights to all content you publish'),
-            _BulletPoint('Your content does not violate copyright or trademarks'),
             _BulletPoint(
-                'Your content is not harmful, hateful, or inappropriate'),
+              'Your content does not violate copyright or trademarks',
+            ),
             _BulletPoint(
-                'StickerOfficer may remove content that violates these terms'),
+              'Your content is not harmful, hateful, or inappropriate',
+            ),
             _BulletPoint(
-                'Other users may report content for review'),
+              'StickerOfficer may remove content that violates these terms',
+            ),
+            _BulletPoint('Other users may report content for review'),
             SizedBox(height: 12),
             Text(
               'Full terms and privacy policy are available in the app settings.',

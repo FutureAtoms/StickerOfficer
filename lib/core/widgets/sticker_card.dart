@@ -29,50 +29,52 @@ class StickerCard extends StatelessWidget {
         onTap: onTap,
         onLongPress: onLongPress,
         child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(borderRadius),
-          border:
-              isSelected ? Border.all(color: AppColors.coral, width: 3) : null,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadowLight,
-              blurRadius: isSelected ? 12 : 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child:
-                    imageUrl != null
-                        ? Image.network(
-                          imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _placeholder(),
-                        )
-                        : _placeholder(),
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(borderRadius),
+            border:
+                isSelected
+                    ? Border.all(color: AppColors.coral, width: 3)
+                    : null,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.shadowLight,
+                blurRadius: isSelected ? 12 : 6,
+                offset: const Offset(0, 2),
               ),
-              if (label != null)
-                Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Text(
-                    label!,
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
-                ),
             ],
           ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child:
+                      imageUrl != null
+                          ? Image.network(
+                            imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _placeholder(),
+                          )
+                          : _placeholder(),
+                ),
+                if (label != null)
+                  Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Text(
+                      label!,
+                      style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
-      ),
       ),
     );
   }

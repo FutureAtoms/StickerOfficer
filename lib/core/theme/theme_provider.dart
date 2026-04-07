@@ -12,15 +12,14 @@ const _prefsKey = 'selected_theme';
 
 final stickerThemeProvider =
     StateNotifierProvider<StickerThemeNotifier, StickerThemeData>((ref) {
-  final prefs = ref.watch(sharedPreferencesProvider);
-  return StickerThemeNotifier(prefs);
-});
+      final prefs = ref.watch(sharedPreferencesProvider);
+      return StickerThemeNotifier(prefs);
+    });
 
 class StickerThemeNotifier extends StateNotifier<StickerThemeData> {
   final SharedPreferences _prefs;
 
-  StickerThemeNotifier(this._prefs)
-      : super(_loadSaved(_prefs));
+  StickerThemeNotifier(this._prefs) : super(_loadSaved(_prefs));
 
   static StickerThemeData _loadSaved(SharedPreferences prefs) {
     final key = prefs.getString(_prefsKey);

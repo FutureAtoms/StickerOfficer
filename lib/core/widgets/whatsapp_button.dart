@@ -48,69 +48,69 @@ class _WhatsAppButtonState extends State<WhatsAppButton>
       label: widget.label,
       child: GestureDetector(
         onTapDown: (_) => _bounceController.reverse(),
-      onTapUp: (_) {
-        _bounceController.forward();
-        HapticFeedback.mediumImpact();
-        if (!widget.isLoading) widget.onPressed();
-      },
-      onTapCancel: () => _bounceController.forward(),
-      child: ScaleTransition(
-        scale: _bounceController,
-        child: Container(
-          height: 64,
-          decoration: BoxDecoration(
-            color: AppColors.whatsappGreen,
-            borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.whatsappGreen.withValues(alpha:0.4),
-                blurRadius: 16,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Center(
-            child:
-                widget.isLoading
-                    ? const SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        color: Colors.white,
+        onTapUp: (_) {
+          _bounceController.forward();
+          HapticFeedback.mediumImpact();
+          if (!widget.isLoading) widget.onPressed();
+        },
+        onTapCancel: () => _bounceController.forward(),
+        child: ScaleTransition(
+          scale: _bounceController,
+          child: Container(
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.whatsappGreen,
+              borderRadius: BorderRadius.circular(32),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.whatsappGreen.withValues(alpha: 0.4),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Center(
+              child:
+                  widget.isLoading
+                      ? const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: Colors.white,
+                        ),
+                      )
+                      : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // WhatsApp-style icon
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.chat_rounded,
+                              color: AppColors.whatsappGreen,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            widget.label,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
-                    )
-                    : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // WhatsApp-style icon
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.chat_rounded,
-                            color: AppColors.whatsappGreen,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          widget.label,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
+            ),
           ),
         ),
-      ),
       ),
     );
   }

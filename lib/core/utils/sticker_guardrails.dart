@@ -178,15 +178,11 @@ class StickerGuardrails {
     final errors = <String>[];
 
     if (text.length > maxTextLength) {
-      errors.add(
-        'Text is too long! Keep it under $maxTextLength characters.',
-      );
+      errors.add('Text is too long! Keep it under $maxTextLength characters.');
     }
 
     if (!isKidSafeText(text)) {
-      errors.add(
-        'Oops! Please use friendly words only.',
-      );
+      errors.add('Oops! Please use friendly words only.');
     }
 
     return errors;
@@ -341,7 +337,9 @@ class StickerGuardrails {
     final quantizedPng = Uint8List.fromList(img.encodePng(quantized, level: 9));
 
     // Return best-effort — may still be > 100KB for photographic content
-    return quantizedPng.lengthInBytes <= maxStaticSizeBytes ? quantizedPng : png;
+    return quantizedPng.lengthInBytes <= maxStaticSizeBytes
+        ? quantizedPng
+        : png;
   }
 
   // =========================================================================

@@ -66,9 +66,10 @@ class Challenge {
       description: json['description'] as String,
       status: json['status'] as String,
       startDate: startRaw != null ? DateTime.parse(startRaw) : DateTime.now(),
-      endDate: endRaw != null
-          ? DateTime.parse(endRaw)
-          : DateTime.now().add(const Duration(days: 7)),
+      endDate:
+          endRaw != null
+              ? DateTime.parse(endRaw)
+              : DateTime.now().add(const Duration(days: 7)),
       submissionCount:
           (json['submission_count'] ?? json['submissionCount']) as int? ?? 0,
       winnerName: (json['winner_name'] ?? json['winnerName']) as String?,

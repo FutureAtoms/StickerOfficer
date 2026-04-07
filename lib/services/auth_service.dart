@@ -12,8 +12,8 @@ class AuthService {
   String? _deviceId;
 
   AuthService({required String baseUrl, FlutterSecureStorage? storage})
-      : _dio = Dio(BaseOptions(baseUrl: baseUrl)),
-        _storage = storage ?? const FlutterSecureStorage();
+    : _dio = Dio(BaseOptions(baseUrl: baseUrl)),
+      _storage = storage ?? const FlutterSecureStorage();
 
   Future<void> ensureRegistered() async {
     _cachedToken = await _storage.read(key: 'jwt_token');
@@ -26,8 +26,10 @@ class AuthService {
       await _storage.write(key: 'device_id', value: _deviceId!);
     }
 
-    final response =
-        await _dio.post('/auth/register', data: {'device_id': _deviceId});
+    final response = await _dio.post(
+      '/auth/register',
+      data: {'device_id': _deviceId},
+    );
     _cachedToken = response.data['token'] as String;
     _publicId = response.data['public_id'] as String;
     await _storage.write(key: 'jwt_token', value: _cachedToken!);
@@ -40,8 +42,10 @@ class AuthService {
       throw StateError('No device_id found — call ensureRegistered first');
     }
 
-    final response =
-        await _dio.post('/auth/refresh', data: {'device_id': deviceId});
+    final response = await _dio.post(
+      '/auth/refresh',
+      data: {'device_id': deviceId},
+    );
     _cachedToken = response.data['token'] as String;
     await _storage.write(key: 'jwt_token', value: _cachedToken!);
     return _cachedToken!;
@@ -58,10 +62,10 @@ class AuthService {
   /// which verifies it and links/creates the account.
   Future<AuthUser> signInWithGoogle(String idToken) async {
     final deviceId = await _storage.read(key: 'device_id');
-    final response = await _dio.post('/auth/google', data: {
-      'id_token': idToken,
-      if (deviceId != null) 'device_id': deviceId,
-    });
+    final response = await _dio.post(
+      '/auth/google',
+      data: {'id_token': idToken, if (deviceId != null) 'device_id': deviceId},
+    );
 
     final data = response.data as Map<String, dynamic>;
 
@@ -77,11 +81,17 @@ class AuthService {
     await _storage.write(key: 'public_id', value: _publicId!);
     await _storage.write(key: 'auth_method', value: 'google');
     await _storage.write(
-        key: 'display_name', value: data['google_name'] as String? ?? '');
+      key: 'display_name',
+      value: data['google_name'] as String? ?? '',
+    );
     await _storage.write(
-        key: 'email', value: data['google_email'] as String? ?? '');
+      key: 'email',
+      value: data['google_email'] as String? ?? '',
+    );
     await _storage.write(
-        key: 'photo_url', value: data['google_photo'] as String? ?? '');
+      key: 'photo_url',
+      value: data['google_photo'] as String? ?? '',
+    );
 
     return getAuthUser();
   }
@@ -89,15 +99,21 @@ class AuthService {
   /// Sign in with Apple. Sends the Apple identity token to the Worker.
   /// [fullName] should be provided on the first authorization (Apple only
   /// sends the name once).
-  Future<AuthUser> signInWithApple(String identityToken,
-      {String? fullName, String? rawNonce}) async {
+  Future<AuthUser> signInWithApple(
+    String identityToken, {
+    String? fullName,
+    String? rawNonce,
+  }) async {
     final deviceId = await _storage.read(key: 'device_id');
-    final response = await _dio.post('/auth/apple', data: {
-      'identity_token': identityToken,
-      if (deviceId != null) 'device_id': deviceId,
-      if (fullName != null) 'full_name': fullName,
-      if (rawNonce != null) 'nonce': rawNonce,
-    });
+    final response = await _dio.post(
+      '/auth/apple',
+      data: {
+        'identity_token': identityToken,
+        if (deviceId != null) 'device_id': deviceId,
+        if (fullName != null) 'full_name': fullName,
+        if (rawNonce != null) 'nonce': rawNonce,
+      },
+    );
 
     final data = response.data as Map<String, dynamic>;
 
@@ -111,9 +127,13 @@ class AuthService {
     await _storage.write(key: 'public_id', value: _publicId!);
     await _storage.write(key: 'auth_method', value: 'apple');
     await _storage.write(
-        key: 'display_name', value: data['apple_name'] as String? ?? '');
+      key: 'display_name',
+      value: data['apple_name'] as String? ?? '',
+    );
     await _storage.write(
-        key: 'email', value: data['apple_email'] as String? ?? '');
+      key: 'email',
+      value: data['apple_email'] as String? ?? '',
+    );
     // Apple doesn't provide a photo URL
     await _storage.delete(key: 'photo_url');
 

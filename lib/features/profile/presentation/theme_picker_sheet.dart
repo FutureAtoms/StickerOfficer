@@ -58,7 +58,9 @@ class _ThemePickerSheet extends ConsumerWidget {
             style: GoogleFonts.nunito(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+              color: Theme.of(
+                context,
+              ).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 24),
@@ -82,9 +84,7 @@ class _ThemePickerSheet extends ConsumerWidget {
                   theme: theme,
                   isSelected: isSelected,
                   onTap: () {
-                    ref
-                        .read(stickerThemeProvider.notifier)
-                        .select(theme.type);
+                    ref.read(stickerThemeProvider.notifier).select(theme.type);
                   },
                 );
               },
@@ -123,9 +123,10 @@ class _ThemePreviewCard extends StatelessWidget {
           color: theme.cardColor,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected
-                ? theme.seedColor
-                : Colors.grey.withValues(alpha: 0.15),
+            color:
+                isSelected
+                    ? theme.seedColor
+                    : Colors.grey.withValues(alpha: 0.15),
             width: isSelected ? 2.5 : 1,
           ),
           boxShadow: [
@@ -154,9 +155,7 @@ class _ThemePreviewCard extends StatelessWidget {
                 right: 0,
                 height: 48,
                 child: Container(
-                  decoration: BoxDecoration(
-                    gradient: theme.gradient,
-                  ),
+                  decoration: BoxDecoration(gradient: theme.gradient),
                 ),
               ),
               // Mini card previews
@@ -175,7 +174,9 @@ class _ThemePreviewCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: theme.cardShadowColor.withValues(alpha: 0.2),
+                              color: theme.cardShadowColor.withValues(
+                                alpha: 0.2,
+                              ),
                               blurRadius: 4,
                               offset: const Offset(0, 1),
                             ),
@@ -203,7 +204,9 @@ class _ThemePreviewCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: theme.cardShadowColor.withValues(alpha: 0.2),
+                              color: theme.cardShadowColor.withValues(
+                                alpha: 0.2,
+                              ),
                               blurRadius: 4,
                               offset: const Offset(0, 1),
                             ),

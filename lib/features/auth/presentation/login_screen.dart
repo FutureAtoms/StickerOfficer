@@ -20,7 +20,8 @@ import '../../../data/providers.dart';
 /// from Google Cloud Console.
 const _googleServerClientId = String.fromEnvironment(
   'GOOGLE_SERVER_CLIENT_ID',
-  defaultValue: '76025587204-9gu1r6uplk7p2dbt45n9pfrops7vmuja.apps.googleusercontent.com',
+  defaultValue:
+      '76025587204-9gu1r6uplk7p2dbt45n9pfrops7vmuja.apps.googleusercontent.com',
 );
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -64,9 +65,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Google sign-in failed: ${e.toString().split('\n').first}'),
+            content: Text(
+              'Google sign-in failed: ${e.toString().split('\n').first}',
+            ),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -96,15 +101,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // Build full name from Apple's response (only available on first auth)
       String? fullName;
       if (credential.givenName != null || credential.familyName != null) {
-        fullName =
-            [credential.givenName, credential.familyName]
-                .where((s) => s != null && s.isNotEmpty)
-                .join(' ');
+        fullName = [
+          credential.givenName,
+          credential.familyName,
+        ].where((s) => s != null && s.isNotEmpty).join(' ');
       }
 
       await ref
           .read(authStateProvider.notifier)
-          .signInWithApple(identityToken, fullName: fullName, rawNonce: rawNonce);
+          .signInWithApple(
+            identityToken,
+            fullName: fullName,
+            rawNonce: rawNonce,
+          );
 
       if (mounted) {
         setState(() => _isLoading = false);
@@ -116,10 +125,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                'Apple sign-in failed: ${e.toString().split('\n').first}'),
+              'Apple sign-in failed: ${e.toString().split('\n').first}',
+            ),
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -130,8 +141,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     const charset =
         '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
     final random = Random.secure();
-    return List.generate(length, (_) => charset[random.nextInt(charset.length)])
-        .join();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 
   @override
@@ -145,15 +158,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const Spacer(flex: 2),
               // App icon
               Container(
-                width: 100,
-                height: 100,
-                decoration: const BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.auto_awesome_rounded,
-                    size: 48, color: Colors.white),
-              )
+                    width: 100,
+                    height: 100,
+                    decoration: const BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.auto_awesome_rounded,
+                      size: 48,
+                      color: Colors.white,
+                    ),
+                  )
                   .animate()
                   .fadeIn(duration: 600.ms)
                   .scale(
@@ -171,10 +187,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const SizedBox(height: 8),
               Text(
                 'Sign in to sync across devices',
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyLarge
-                    ?.copyWith(color: AppColors.textSecondary),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: AppColors.textSecondary),
                 textAlign: TextAlign.center,
               ).animate().fadeIn(duration: 500.ms, delay: 300.ms),
               const Spacer(),

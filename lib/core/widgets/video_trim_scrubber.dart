@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -63,17 +62,18 @@ class _VideoTrimScrubberState extends State<VideoTrimScrubber> {
                   child: SizedBox(
                     height: _thumbHeight,
                     child: Row(
-                      children: widget.thumbnails.map((bytes) {
-                        return SizedBox(
-                          width: thumbWidth,
-                          height: _thumbHeight,
-                          child: Image.memory(
-                            bytes,
-                            fit: BoxFit.cover,
-                            gaplessPlayback: true,
-                          ),
-                        );
-                      }).toList(),
+                      children:
+                          widget.thumbnails.map((bytes) {
+                            return SizedBox(
+                              width: thumbWidth,
+                              height: _thumbHeight,
+                              child: Image.memory(
+                                bytes,
+                                fit: BoxFit.cover,
+                                gaplessPlayback: true,
+                              ),
+                            );
+                          }).toList(),
                     ),
                   ),
                 ),
@@ -115,8 +115,8 @@ class _VideoTrimScrubberState extends State<VideoTrimScrubber> {
               Positioned(
                 left: _handleWidth + totalWidth * widget.selectionStart,
                 top: 12,
-                width: totalWidth *
-                    (widget.selectionEnd - widget.selectionStart),
+                width:
+                    totalWidth * (widget.selectionEnd - widget.selectionStart),
                 height: _thumbHeight,
                 child: Container(
                   decoration: BoxDecoration(
@@ -128,9 +128,7 @@ class _VideoTrimScrubberState extends State<VideoTrimScrubber> {
 
               // Playback indicator
               Positioned(
-                left: _handleWidth +
-                    totalWidth * widget.playbackPosition -
-                    1,
+                left: _handleWidth + totalWidth * widget.playbackPosition - 1,
                 top: 10,
                 child: Container(
                   width: 2,
@@ -141,7 +139,8 @@ class _VideoTrimScrubberState extends State<VideoTrimScrubber> {
 
               // Left handle
               Positioned(
-                left: _handleWidth +
+                left:
+                    _handleWidth +
                     totalWidth * widget.selectionStart -
                     _handleWidth / 2,
                 top: 12,
@@ -155,7 +154,8 @@ class _VideoTrimScrubberState extends State<VideoTrimScrubber> {
 
               // Right handle
               Positioned(
-                left: _handleWidth +
+                left:
+                    _handleWidth +
                     totalWidth * widget.selectionEnd -
                     _handleWidth / 2,
                 top: 12,
@@ -199,24 +199,23 @@ class _VideoTrimScrubberState extends State<VideoTrimScrubber> {
   }
 
   Widget _buildDurationLabel() {
-    final durationMs = ((widget.selectionEnd - widget.selectionStart) *
-            widget.videoDurationMs)
-        .round();
+    final durationMs =
+        ((widget.selectionEnd - widget.selectionStart) * widget.videoDurationMs)
+            .round();
     final seconds = durationMs / 1000;
     final isTooShort = durationMs < widget.minSelectionMs;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: isTooShort
-            ? AppColors.coral.withValues(alpha: 0.15)
-            : AppColors.purple.withValues(alpha: 0.15),
+        color:
+            isTooShort
+                ? AppColors.coral.withValues(alpha: 0.15)
+                : AppColors.purple.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        isTooShort
-            ? 'Too short!'
-            : '${seconds.toStringAsFixed(1)}s selected',
+        isTooShort ? 'Too short!' : '${seconds.toStringAsFixed(1)}s selected',
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.bold,

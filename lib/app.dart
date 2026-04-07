@@ -15,7 +15,8 @@ class StickerOfficerApp extends ConsumerStatefulWidget {
 }
 
 class _StickerOfficerAppState extends ConsumerState<StickerOfficerApp> {
-  final SharedStickerImportService _importService = SharedStickerImportService();
+  final SharedStickerImportService _importService =
+      SharedStickerImportService();
   final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
       GlobalKey<ScaffoldMessengerState>();
   bool _isImporting = false;

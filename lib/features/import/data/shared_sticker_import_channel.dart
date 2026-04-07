@@ -5,11 +5,7 @@ class SharedStickerImportFile {
   final String? mimeType;
   final String? name;
 
-  const SharedStickerImportFile({
-    required this.path,
-    this.mimeType,
-    this.name,
-  });
+  const SharedStickerImportFile({required this.path, this.mimeType, this.name});
 
   factory SharedStickerImportFile.fromMap(Map<Object?, Object?> map) {
     return SharedStickerImportFile(
