@@ -10,9 +10,7 @@ void main() {
     late SharedPreferences prefs;
 
     setUp(() async {
-      SharedPreferences.setMockInitialValues({
-        'onboarding_complete': true,
-      });
+      SharedPreferences.setMockInitialValues({'onboarding_complete': true});
       prefs = await SharedPreferences.getInstance();
     });
 
@@ -23,42 +21,23 @@ void main() {
           child: const StickerOfficerApp(),
         ),
       );
-      await tester.pumpAndSettle();
+      // Pump a few frames (don't settle — loading screen has looping animations)
+      await tester.pump(const Duration(seconds: 1));
 
       // The app should render a MaterialApp via MaterialApp.router
       expect(find.byType(MaterialApp), findsOneWidget);
     });
 
-    testWidgets('shows bottom navigation bar', (WidgetTester tester) async {
+    testWidgets('shows loading screen on startup', (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
           child: const StickerOfficerApp(),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
-      // Verify all navigation items are present
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.text('Explore'), findsOneWidget);
-      expect(find.text('My Packs'), findsOneWidget);
-      expect(find.text('Profile'), findsOneWidget);
-
-      // Center create button with gradient
-      expect(find.byIcon(Icons.add_rounded), findsOneWidget);
-    });
-
-    testWidgets('displays StickerOfficer title in feed',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-          child: const StickerOfficerApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // The FeedScreen header shows 'StickerOfficer' text
+      // Loading screen shows app name and progress
       expect(find.text('StickerOfficer'), findsOneWidget);
     });
 
@@ -69,12 +48,10 @@ void main() {
           child: const StickerOfficerApp(),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
       // Find the MaterialApp and verify its theme has useMaterial3 enabled
-      final materialApp = tester.widget<MaterialApp>(
-        find.byType(MaterialApp),
-      );
+      final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(materialApp.theme?.useMaterial3, isTrue);
       expect(materialApp.darkTheme?.useMaterial3, isTrue);
     });

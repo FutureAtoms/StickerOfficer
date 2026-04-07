@@ -14,6 +14,7 @@ import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/packs/presentation/pack_detail_screen.dart';
 import '../../features/ai_generate/presentation/ai_prompt_screen.dart';
 import '../../features/challenges/presentation/challenges_screen.dart';
+import '../../features/auth/presentation/loading_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/onboarding_screen.dart';
 import '../widgets/main_shell.dart';
@@ -21,21 +22,7 @@ import '../../data/providers.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/home',
-    redirect: (context, state) {
-      final prefs = ref.read(sharedPreferencesProvider);
-      final hasSeenOnboarding = prefs.getBool('onboarding_complete') ?? false;
-      final location = state.matchedLocation;
-
-      // Don't redirect if already on onboarding or login
-      if (location == '/onboarding' || location == '/login') return null;
-
-      // Don't redirect if navigating to a pack (import deep link)
-      if (location.startsWith('/pack/')) return null;
-
-      if (!hasSeenOnboarding) return '/onboarding';
-      return null;
-    },
+    initialLocation: '/loading',
     errorBuilder:
         (context, state) => Scaffold(
           body: Center(
@@ -79,7 +66,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ),
     routes: [
-      // Auth
+      // Loading & Auth
+      GoRoute(
+        path: '/loading',
+        builder: (context, state) => const LoadingScreen(),
+      ),
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),
