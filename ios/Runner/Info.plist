@@ -60,5 +60,11 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>StickerOfficer needs access to your photos to create stickers from them.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>StickerOfficer needs permission to save stickers to your photo library.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>StickerOfficer needs camera access to take photos for sticker creation.</string>
 	</dict>
 </plist>
