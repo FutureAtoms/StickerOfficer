@@ -60,13 +60,15 @@ class SharedStickerImportService {
       stickerPaths.add(destination.path);
     }
 
-    final firstName = files.first.name ?? validFiles.first.source.uri.pathSegments.last;
+    final firstName =
+        files.first.name ?? validFiles.first.source.uri.pathSegments.last;
     final packName = _derivePackName(firstName, stickerPaths.length);
 
     return StickerPack(
       id: packId,
       name: packName,
       authorName: 'Imported',
+      type: StickerPackType.staticPack,
       stickerPaths: stickerPaths,
       trayIconPath: stickerPaths.first,
       createdAt: DateTime.now(),
@@ -106,11 +108,12 @@ class SharedStickerImportService {
   }
 
   static String _derivePackName(String sourceName, int count) {
-    final cleaned = sourceName
-        .replaceAll(RegExp(r'\.[A-Za-z0-9]+$'), '')
-        .replaceAll(RegExp(r'[_-]+'), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    final cleaned =
+        sourceName
+            .replaceAll(RegExp(r'\.[A-Za-z0-9]+$'), '')
+            .replaceAll(RegExp(r'[_-]+'), ' ')
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
 
     if (count == 1 && cleaned.isNotEmpty) {
       return cleaned.length > 48 ? cleaned.substring(0, 48).trim() : cleaned;

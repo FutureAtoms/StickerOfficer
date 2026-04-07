@@ -7,11 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/bubbly_button.dart';
 import '../../../core/widgets/shimmer_skeleton.dart';
 import '../../../core/widgets/whatsapp_button.dart';
 import '../../../data/models/sticker_pack.dart';
 import '../../../data/providers.dart';
 import '../../export/data/whatsapp_export_service.dart';
+import '../../editor/presentation/editor_screen.dart';
 
 class PackDetailScreen extends ConsumerWidget {
   final String packId;
@@ -114,6 +116,79 @@ class _PackDetailBody extends ConsumerWidget {
 
   const _PackDetailBody({required this.pack});
 
+  Future<void> _showAddStickerSheet(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder:
+          (sheetContext) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Add to ${pack.type.label}',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Photo packs stay separate from animated/video packs so WhatsApp-compatible types do not collide.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _AddMediaOption(
+                    icon: Icons.photo_library_rounded,
+                    title: 'Bulk Photos',
+                    subtitle:
+                        pack.type.isAnimated
+                            ? 'Disabled for animated packs'
+                            : 'Select multiple photos for this pack',
+                    color: AppColors.coral,
+                    enabled: !pack.type.isAnimated,
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      context.push('/bulk-editor/${pack.id}');
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _AddMediaOption(
+                    icon: Icons.video_library_rounded,
+                    title: 'Bulk Videos',
+                    subtitle:
+                        pack.type.isAnimated
+                            ? 'Select multiple videos for this animated pack'
+                            : 'Disabled for photo packs',
+                    color: Colors.indigo,
+                    enabled: pack.type.isAnimated,
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      context.push('/bulk-video-editor/${pack.id}');
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stickerCount = pack.stickerPaths.length;
@@ -128,15 +203,13 @@ class _PackDetailBody extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.add_photo_alternate_rounded),
               tooltip: 'Add Stickers',
-              onPressed: () => context.push('/bulk-editor/${pack.id}'),
+              onPressed: () => _showAddStickerSheet(context),
             ),
           IconButton(
             icon: const Icon(Icons.share_rounded),
             onPressed: () {
               SharePlus.instance.share(
-                ShareParams(
-                  text: 'Check out this sticker pack: ${pack.name}!',
-                ),
+                ShareParams(text: 'Check out this sticker pack: ${pack.name}!'),
               );
             },
           ),
@@ -210,6 +283,25 @@ class _PackDetailBody extends ConsumerWidget {
                                   fontSize: 14,
                                 ),
                               ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  pack.type.label,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -219,31 +311,36 @@ class _PackDetailBody extends ConsumerWidget {
                   const SizedBox(height: 16),
                   // Stats row
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _StatItem(
-                        icon: Icons.favorite_rounded,
-                        value: _formatCount(pack.likeCount),
-                        label: 'Likes',
-                        color: AppColors.coral,
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _StatItem(
+                            icon: Icons.favorite_rounded,
+                            value: _formatCount(pack.likeCount),
+                            label: 'Likes',
+                            color: AppColors.coral,
+                          ),
+                          _StatItem(
+                            icon: Icons.download_rounded,
+                            value: _formatCount(pack.downloadCount),
+                            label: 'Downloads',
+                            color: AppColors.teal,
+                          ),
+                          _StatItem(
+                            icon: Icons.photo_library_rounded,
+                            value: '$stickerCount',
+                            label: 'Stickers',
+                            color: AppColors.purple,
+                          ),
+                        ],
+                      )
+                      .animate()
+                      .fadeIn(duration: 500.ms, delay: 200.ms)
+                      .slideY(
+                        begin: 0.2,
+                        end: 0,
+                        duration: 500.ms,
+                        delay: 200.ms,
                       ),
-                      _StatItem(
-                        icon: Icons.download_rounded,
-                        value: _formatCount(pack.downloadCount),
-                        label: 'Downloads',
-                        color: AppColors.teal,
-                      ),
-                      _StatItem(
-                        icon: Icons.photo_library_rounded,
-                        value: '$stickerCount',
-                        label: 'Stickers',
-                        color: AppColors.purple,
-                      ),
-                    ],
-                  )
-                  .animate()
-                  .fadeIn(duration: 500.ms, delay: 200.ms)
-                  .slideY(begin: 0.2, end: 0, duration: 500.ms, delay: 200.ms),
                   const SizedBox(height: 20),
                   // Sticker grid
                   Row(
@@ -255,7 +352,7 @@ class _PackDetailBody extends ConsumerWidget {
                       const Spacer(),
                       if (stickerCount < 30)
                         TextButton.icon(
-                          onPressed: () => context.push('/bulk-editor/${pack.id}'),
+                          onPressed: () => _showAddStickerSheet(context),
                           icon: const Icon(Icons.add_rounded, size: 18),
                           label: const Text('Add'),
                         ),
@@ -275,7 +372,9 @@ class _PackDetailBody extends ConsumerWidget {
                           Icon(
                             Icons.add_photo_alternate_rounded,
                             size: 48,
-                            color: AppColors.textSecondary.withValues(alpha: 0.4),
+                            color: AppColors.textSecondary.withValues(
+                              alpha: 0.4,
+                            ),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -299,35 +398,81 @@ class _PackDetailBody extends ConsumerWidget {
                       itemCount: stickerCount,
                       itemBuilder: (context, index) {
                         final path = pack.stickerPaths[index];
-                        return Semantics(
-                          label: 'Sticker ${index + 1} of $stickerCount',
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color:
-                                  AppColors.pastels[index %
-                                      AppColors.pastels.length],
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
-                              child: Image.file(
-                                File(path),
-                                fit: BoxFit.cover,
-                                errorBuilder:
-                                    (_, __, ___) => Center(
-                                      child: Icon(
-                                        Icons.emoji_emotions_rounded,
-                                        color: AppColors.coral.withValues(alpha: 0.3),
-                                        size: 28,
+                        return GestureDetector(
+                              onTap:
+                                  () => _editSticker(context, ref, pack, index),
+                              onLongPress:
+                                  () => _showStickerActions(
+                                    context,
+                                    ref,
+                                    pack,
+                                    index,
+                                  ),
+                              child: Semantics(
+                                button: true,
+                                label: 'Sticker ${index + 1} of $stickerCount',
+                                hint:
+                                    'Tap to edit. Long press for more actions.',
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color:
+                                        AppColors.pastels[index %
+                                            AppColors.pastels.length],
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: Image.file(
+                                          File(path),
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (_, __, ___) => Center(
+                                                child: Icon(
+                                                  Icons.emoji_emotions_rounded,
+                                                  color: AppColors.coral
+                                                      .withValues(alpha: 0.3),
+                                                  size: 28,
+                                                ),
+                                              ),
+                                        ),
                                       ),
-                                    ),
+                                      Positioned(
+                                        right: 6,
+                                        bottom: 6,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.55,
+                                            ),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(5),
+                                            child: Icon(
+                                              Icons.edit_rounded,
+                                              size: 14,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        )
-                        .animate()
-                        .fadeIn(duration: 300.ms, delay: (index * 60).ms)
-                        .scale(begin: const Offset(0.8, 0.8), end: const Offset(1, 1), duration: 300.ms, delay: (index * 60).ms, curve: Curves.easeOutBack);
+                            )
+                            .animate()
+                            .fadeIn(duration: 300.ms, delay: (index * 60).ms)
+                            .scale(
+                              begin: const Offset(0.8, 0.8),
+                              end: const Offset(1, 1),
+                              duration: 300.ms,
+                              delay: (index * 60).ms,
+                              curve: Curves.easeOutBack,
+                            );
                       },
                     ),
                   const SizedBox(height: 16),
@@ -374,7 +519,9 @@ class _PackDetailBody extends ConsumerWidget {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: AppColors.coral.withValues(alpha: isLiked ? 0.2 : 0.1),
+                      color: AppColors.coral.withValues(
+                        alpha: isLiked ? 0.2 : 0.1,
+                      ),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: IconButton(
@@ -405,6 +552,265 @@ class _PackDetailBody extends ConsumerWidget {
     );
   }
 
+  Future<void> _editSticker(
+    BuildContext context,
+    WidgetRef ref,
+    StickerPack pack,
+    int index,
+  ) async {
+    final originalPath = pack.stickerPaths[index];
+    final savedPath = await Navigator.push<String?>(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => ProviderScope(
+              child: EditorScreen(imagePath: originalPath, bulkMode: true),
+            ),
+      ),
+    );
+
+    if (!context.mounted || savedPath == null) return;
+
+    final updatedPaths = List<String>.from(pack.stickerPaths);
+    updatedPaths[index] = savedPath;
+    final updatedTrayIcon =
+        pack.trayIconPath == originalPath ? savedPath : pack.trayIconPath;
+
+    await ref
+        .read(packsProvider.notifier)
+        .updatePack(
+          _copyPack(
+            pack,
+            stickerPaths: updatedPaths,
+            trayIconPath: updatedTrayIcon,
+          ),
+        );
+
+    await _deleteFileIfUnused(
+      originalPath,
+      stickerPaths: updatedPaths,
+      trayIconPath: updatedTrayIcon,
+    );
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Sticker updated'),
+        backgroundColor: AppColors.teal,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Future<void> _showStickerActions(
+    BuildContext context,
+    WidgetRef ref,
+    StickerPack pack,
+    int index,
+  ) {
+    final stickerPath = pack.stickerPaths[index];
+    final isPackIcon = pack.trayIconPath == stickerPath;
+
+    return showModalBottomSheet<void>(
+      context: context,
+      builder:
+          (sheetContext) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Sticker Actions',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    isPackIcon
+                        ? 'This sticker is currently the pack icon.'
+                        : 'Choose what to do with this sticker.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  BubblyButton(
+                    label: 'Edit Sticker',
+                    icon: Icons.edit_rounded,
+                    color: AppColors.teal,
+                    onPressed: () async {
+                      Navigator.pop(sheetContext);
+                      await _editSticker(context, ref, pack, index);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  BubblyButton(
+                    label: 'Set as Pack Icon',
+                    icon: Icons.photo_rounded,
+                    color: AppColors.purple,
+                    onPressed: () async {
+                      Navigator.pop(sheetContext);
+                      await _setAsTrayIcon(context, ref, pack, index);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  BubblyButton(
+                    label: 'Delete Sticker',
+                    icon: Icons.delete_outline_rounded,
+                    color: AppColors.coral,
+                    onPressed: () async {
+                      Navigator.pop(sheetContext);
+                      await _deleteSticker(context, ref, pack, index);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  Future<void> _setAsTrayIcon(
+    BuildContext context,
+    WidgetRef ref,
+    StickerPack pack,
+    int index,
+  ) async {
+    final trayIconPath = pack.stickerPaths[index];
+
+    await ref
+        .read(packsProvider.notifier)
+        .updatePack(_copyPack(pack, trayIconPath: trayIconPath));
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          pack.trayIconPath == trayIconPath
+              ? 'This sticker is already the pack icon'
+              : 'Pack icon updated',
+        ),
+        backgroundColor: AppColors.purple,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Future<void> _deleteSticker(
+    BuildContext context,
+    WidgetRef ref,
+    StickerPack pack,
+    int index,
+  ) async {
+    final stickerPath = pack.stickerPaths[index];
+    final shouldDelete =
+        await showDialog<bool>(
+          context: context,
+          builder:
+              (dialogContext) => AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                title: const Text('Delete sticker?'),
+                content: const Text(
+                  'This removes the sticker from the pack. You can’t undo it.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.coral,
+                    ),
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    child: const Text('Delete'),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
+
+    if (!shouldDelete || !context.mounted) return;
+
+    final updatedPaths = List<String>.from(pack.stickerPaths)..removeAt(index);
+    final updatedTrayIcon =
+        pack.trayIconPath == stickerPath
+            ? (updatedPaths.isNotEmpty ? updatedPaths.first : null)
+            : pack.trayIconPath;
+
+    await ref
+        .read(packsProvider.notifier)
+        .updatePack(
+          _copyPack(
+            pack,
+            stickerPaths: updatedPaths,
+            trayIconPath: updatedTrayIcon,
+            clearTrayIcon: updatedTrayIcon == null,
+          ),
+        );
+
+    await _deleteFileIfUnused(
+      stickerPath,
+      stickerPaths: updatedPaths,
+      trayIconPath: updatedTrayIcon,
+    );
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Sticker deleted'),
+        backgroundColor: AppColors.coral,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  StickerPack _copyPack(
+    StickerPack pack, {
+    List<String>? stickerPaths,
+    String? trayIconPath,
+    bool clearTrayIcon = false,
+  }) {
+    return StickerPack(
+      id: pack.id,
+      name: pack.name,
+      authorName: pack.authorName,
+      type: pack.type,
+      stickerPaths: stickerPaths ?? pack.stickerPaths,
+      trayIconPath: clearTrayIcon ? null : trayIconPath ?? pack.trayIconPath,
+      likeCount: pack.likeCount,
+      downloadCount: pack.downloadCount,
+      createdAt: pack.createdAt,
+      isPublic: pack.isPublic,
+      tags: List<String>.from(pack.tags),
+    );
+  }
+
+  Future<void> _deleteFileIfUnused(
+    String path, {
+    required List<String> stickerPaths,
+    required String? trayIconPath,
+  }) async {
+    if (stickerPaths.contains(path) || trayIconPath == path) return;
+
+    final file = File(path);
+    if (!await file.exists()) return;
+
+    try {
+      await file.delete();
+    } catch (_) {
+      // Keep the pack update even if the old file cannot be cleaned up.
+    }
+  }
+
   Future<void> _exportToWhatsApp(BuildContext context) async {
     // Show progress indicator.
     ScaffoldMessenger.of(context).showSnackBar(
@@ -427,14 +833,23 @@ class _PackDetailBody extends ConsumerWidget {
       final file = File(path);
       if (await file.exists()) {
         stickerDataList.add(
-          StickerData(data: await file.readAsBytes(), sourcePath: path),
+          StickerData(
+            data: await file.readAsBytes(),
+            isAnimated: pack.type.isAnimated,
+            sourcePath: path,
+          ),
         );
       }
     }
 
     // If we have fewer than the minimum, pad with proper 512x512 placeholders.
     while (stickerDataList.length < WhatsAppExportService.minStickersPerPack) {
-      stickerDataList.add(StickerData(data: WhatsAppExportService.generatePlaceholderSticker()));
+      stickerDataList.add(
+        StickerData(
+          data: WhatsAppExportService.generatePlaceholderSticker(),
+          isAnimated: pack.type.isAnimated,
+        ),
+      );
     }
 
     // Tray icon: use pack trayIconPath if available, otherwise first sticker.
@@ -456,6 +871,7 @@ class _PackDetailBody extends ConsumerWidget {
       stickers: stickerDataList,
       trayIcon: trayIcon,
       trayIconSourcePath: pack.trayIconPath,
+      packIdentifier: pack.id,
     );
 
     if (!context.mounted) return;
@@ -478,6 +894,82 @@ class _PackDetailBody extends ConsumerWidget {
       return '${k.toStringAsFixed(k.truncateToDouble() == k ? 0 : 1)}k';
     }
     return '$count';
+  }
+}
+
+class _AddMediaOption extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _AddMediaOption({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: enabled ? 1 : 0.55,
+      child: Material(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: Colors.white),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  enabled
+                      ? Icons.arrow_forward_ios_rounded
+                      : Icons.block_rounded,
+                  color: color,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -20,6 +20,12 @@ import java.io.File
  * - Individual sticker and tray icon files
  */
 class StickerContentProvider : ContentProvider() {
+    private data class PackMetadata(
+        val name: String,
+        val publisher: String,
+        val imageDataVersion: String,
+        val animatedStickerPack: Int
+    )
 
     companion object {
         private const val TAG = "StickerOfficer"
@@ -71,6 +77,26 @@ class StickerContentProvider : ContentProvider() {
         return File(ctx.filesDir, "sticker_packs")
     }
 
+    private fun readPackMetadata(packDir: File): PackMetadata {
+        val metaFile = File(packDir, "pack_info.txt")
+        if (!metaFile.exists()) {
+            return PackMetadata(
+                name = packDir.name,
+                publisher = "StickerOfficer",
+                imageDataVersion = "1",
+                animatedStickerPack = 0
+            )
+        }
+
+        val lines = metaFile.readLines()
+        return PackMetadata(
+            name = lines.getOrNull(0) ?: packDir.name,
+            publisher = lines.getOrNull(1) ?: "StickerOfficer",
+            imageDataVersion = lines.getOrNull(2) ?: "1",
+            animatedStickerPack = if (lines.getOrNull(3) == "1") 1 else 0
+        )
+    }
+
     override fun onCreate(): Boolean = true
 
     override fun query(
@@ -93,9 +119,13 @@ class StickerContentProvider : ContentProvider() {
                         val stickerFiles = packDir.listFiles()?.filter {
                             it.extension == "webp" && !it.name.startsWith("tray_icon")
                         } ?: emptyList()
-                        val trayIcon = File(packDir, "tray_icon.webp")
-                        val trayExists = trayIcon.exists()
-                        val traySize = if (trayExists) trayIcon.length() else 0L
+                        val trayIcon = when {
+                            File(packDir, "tray_icon.png").exists() -> File(packDir, "tray_icon.png")
+                            File(packDir, "tray_icon.webp").exists() -> File(packDir, "tray_icon.webp")
+                            else -> null
+                        }
+                        val trayExists = trayIcon != null
+                        val traySize = trayIcon?.length() ?: 0L
                         Log.d(TAG, "Pack ${packDir.name}: ${stickerFiles.size} stickers, tray_icon exists=$trayExists (${traySize} bytes)")
                     }
                 }
@@ -151,16 +181,7 @@ class StickerContentProvider : ContentProvider() {
 
         stickersDir.listFiles()?.filter { it.isDirectory }?.forEach { packDir ->
             val identifier = packDir.name
-            val metaFile = File(packDir, "pack_info.txt")
-            val packName = if (metaFile.exists()) {
-                metaFile.readLines().firstOrNull() ?: identifier
-            } else identifier
-            val publisher = if (metaFile.exists()) {
-                metaFile.readLines().getOrNull(1) ?: "StickerOfficer"
-            } else "StickerOfficer"
-            val imageDataVersion = if (metaFile.exists()) {
-                metaFile.readLines().getOrNull(2) ?: "1"
-            } else "1"
+            val metadata = readPackMetadata(packDir)
 
             // Find the actual tray icon file (could be .webp or .png)
             val trayIconName = when {
@@ -171,8 +192,8 @@ class StickerContentProvider : ContentProvider() {
 
             cursor.addRow(arrayOf<Any?>(
                 identifier,                                              // identifier
-                packName,                                                // name
-                publisher,                                               // publisher
+                metadata.name,                                           // name
+                metadata.publisher,                                      // publisher
                 trayIconName,                                            // tray icon filename
                 "https://play.google.com/store/apps/details?id=com.futureatoms.sticker_officer",  // play store link
                 "",                                                      // ios store link
@@ -180,9 +201,9 @@ class StickerContentProvider : ContentProvider() {
                 "",                                                      // publisher website
                 "https://www.example.com/privacy",                       // privacy policy
                 "https://www.example.com/license",                       // license
-                imageDataVersion,                                         // image data version
+                metadata.imageDataVersion,                               // image data version
                 0,                                                       // avoid cache (0 = false)
-                0                                                        // animated (0 = false)
+                metadata.animatedStickerPack                             // animated flag
             ))
         }
 
@@ -210,16 +231,7 @@ class StickerContentProvider : ContentProvider() {
         val packDir = File(getStickersDir(), identifier)
         if (!packDir.exists()) return cursor
 
-        val metaFile = File(packDir, "pack_info.txt")
-        val packName = if (metaFile.exists()) {
-            metaFile.readLines().firstOrNull() ?: identifier
-        } else identifier
-        val publisher = if (metaFile.exists()) {
-            metaFile.readLines().getOrNull(1) ?: "StickerOfficer"
-        } else "StickerOfficer"
-        val imageDataVersion = if (metaFile.exists()) {
-            metaFile.readLines().getOrNull(2) ?: "1"
-        } else "1"
+        val metadata = readPackMetadata(packDir)
 
         val trayIconName = when {
             File(packDir, "tray_icon.png").exists() -> "tray_icon.png"
@@ -228,10 +240,11 @@ class StickerContentProvider : ContentProvider() {
         }
 
         cursor.addRow(arrayOf<Any?>(
-            identifier, packName, publisher, trayIconName,
+            identifier, metadata.name, metadata.publisher, trayIconName,
             "https://play.google.com/store/apps/details?id=com.futureatoms.sticker_officer",
             "", "", "", "https://www.example.com/privacy",
-            "https://www.example.com/license", imageDataVersion, 0, 0
+            "https://www.example.com/license", metadata.imageDataVersion, 0,
+            metadata.animatedStickerPack
         ))
 
         return cursor

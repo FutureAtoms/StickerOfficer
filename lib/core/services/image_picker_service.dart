@@ -10,7 +10,12 @@ class ImagePickerService {
   ImagePickerService([ImagePicker? picker]) : _picker = picker ?? ImagePicker();
 
   /// Pick multiple images from the gallery.
-  Future<List<XFile>> pickMultiImage() => _picker.pickMultiImage();
+  Future<List<XFile>> pickMultiImage({int? limit}) =>
+      _picker.pickMultiImage(limit: limit);
+
+  /// Pick multiple media items from the gallery.
+  Future<List<XFile>> pickMultipleMedia({int? limit}) =>
+      _picker.pickMultipleMedia(limit: limit);
 }
 
 final imagePickerServiceProvider = Provider<ImagePickerService>(

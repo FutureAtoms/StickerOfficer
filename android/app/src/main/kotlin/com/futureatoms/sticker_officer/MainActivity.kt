@@ -73,6 +73,33 @@ class MainActivity : FlutterActivity() {
                 header[11] == 'P'.code.toByte()
     }
 
+    private fun encodeStaticWebpFrame(
+        inputFile: File,
+        outputFile: File,
+        quality: Int
+    ): Boolean {
+        if (!inputFile.exists()) {
+            android.util.Log.e(TAG, "Static WebP source file missing: ${inputFile.absolutePath}")
+            return false
+        }
+
+        outputFile.parentFile?.mkdirs()
+        val bitmap = BitmapFactory.decodeFile(inputFile.absolutePath)
+        if (bitmap == null) {
+            android.util.Log.e(TAG, "Could not decode static WebP source: ${inputFile.absolutePath}")
+            return false
+        }
+
+        return try {
+            val baos = ByteArrayOutputStream()
+            bitmap.compress(webpLossy(), quality.coerceIn(1, 100), baos)
+            outputFile.writeBytes(baos.toByteArray())
+            isValidWebpFile(outputFile)
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
@@ -100,6 +127,7 @@ class MainActivity : FlutterActivity() {
                     val publisher = call.argument<String>("publisher")
                     val stickerPaths = call.argument<List<String>>("stickerPaths")
                     val trayIconPath = call.argument<String>("trayIconPath")
+                    val animatedStickerPack = call.argument<Boolean>("animatedStickerPack") ?: false
 
                     if (identifier == null || name == null || stickerPaths == null || trayIconPath == null) {
                         result.error("INVALID_ARGS", "Missing required arguments", null)
@@ -123,7 +151,8 @@ class MainActivity : FlutterActivity() {
                             name = name,
                             publisher = effectivePublisher,
                             stickerPaths = stickerPaths,
-                            trayIconPath = trayIconPath
+                            trayIconPath = trayIconPath,
+                            animatedStickerPack = animatedStickerPack
                         )
 
                         val alreadyWhitelisted = WhatsAppWhitelistCheck.isPackWhitelistedAnywhere(this, identifier)
@@ -143,7 +172,8 @@ class MainActivity : FlutterActivity() {
                             publisher = effectivePublisher,
                             stickerPaths = stickerPaths,
                             trayIconPath = trayIconPath,
-                            sourceSignature = sourceSignature
+                            sourceSignature = sourceSignature,
+                            animatedStickerPack = animatedStickerPack
                         )
 
                         if (packDir == null) {
@@ -208,6 +238,29 @@ class MainActivity : FlutterActivity() {
                 "isWhatsAppInstalled" -> {
                     result.success(isWhatsAppInstalled())
                 }
+                "encodeStaticWebpFrame" -> {
+                    val inputPath = call.argument<String>("inputPath")
+                    val outputPath = call.argument<String>("outputPath")
+                    val quality = call.argument<Int>("quality") ?: 80
+
+                    if (inputPath == null || outputPath == null) {
+                        result.error("INVALID_ARGS", "Missing required arguments", null)
+                        return@setMethodCallHandler
+                    }
+
+                    try {
+                        result.success(
+                            encodeStaticWebpFrame(
+                                inputFile = File(inputPath),
+                                outputFile = File(outputPath),
+                                quality = quality
+                            )
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e(TAG, "Static WebP encode error", e)
+                        result.success(false)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -231,7 +284,8 @@ class MainActivity : FlutterActivity() {
         publisher: String,
         stickerPaths: List<String>,
         trayIconPath: String,
-        sourceSignature: String
+        sourceSignature: String,
+        animatedStickerPack: Boolean
     ): File? {
         val stickersBaseDir = File(filesDir, "sticker_packs")
         val packDir = File(stickersBaseDir, identifier)
@@ -247,7 +301,9 @@ class MainActivity : FlutterActivity() {
 
         // Update the image data version on every export so WhatsApp refreshes changed packs.
         val imageDataVersion = System.currentTimeMillis().toString()
-        File(packDir, "pack_info.txt").writeText("$name\n$publisher\n$imageDataVersion")
+        File(packDir, "pack_info.txt").writeText(
+            "$name\n$publisher\n$imageDataVersion\n${if (animatedStickerPack) 1 else 0}"
+        )
         File(packDir, "pack_signature.txt").writeText(sourceSignature)
 
         // Convert and save tray icon as a 96x96 PNG, matching the official sample app.
@@ -292,13 +348,27 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // Convert each sticker to 512x512 WebP
+        // Prepare each sticker asset for WhatsApp.
         var stickerCount = 0
+        val maxStickerSizeBytes = if (animatedStickerPack) 500 * 1024 else 100 * 1024
         for ((index, path) in stickerPaths.withIndex()) {
             try {
                 val srcFile = File(path)
                 if (!srcFile.exists()) {
                     android.util.Log.d(TAG, "Sticker file not found: $path")
+                    continue
+                }
+
+                if (animatedStickerPack) {
+                    val copied = copyPreparedStickerAsset(
+                        sourceFile = srcFile,
+                        packDir = packDir,
+                        stickerIndex = stickerCount + 1,
+                        maxSizeBytes = maxStickerSizeBytes
+                    )
+                    if (copied) {
+                        stickerCount++
+                    }
                     continue
                 }
 
@@ -346,17 +416,21 @@ class MainActivity : FlutterActivity() {
                 encoded = losslessBaos.toByteArray()
 
                 // If lossless is too big, use lossy with quality reduction
-                if (encoded.size > 100 * 1024) {
+                if (encoded.size > maxStickerSizeBytes) {
                     var quality = 80
                     do {
                         val baos = ByteArrayOutputStream()
                         canvas.compress(webpLossy(), quality, baos)
                         encoded = baos.toByteArray()
                         quality -= 10
-                    } while (encoded.size > 100 * 1024 && quality > 10)
+                    } while (encoded.size > maxStickerSizeBytes && quality > 10)
                 }
 
-                android.util.Log.d(TAG, "Sticker ${stickerCount + 1}: ${encoded.size} bytes (${if (encoded.size <= 100 * 1024) "OK" else "TOO BIG"})")
+                android.util.Log.d(
+                    TAG,
+                    "Sticker ${stickerCount + 1}: ${encoded.size} bytes " +
+                            "(${if (encoded.size <= maxStickerSizeBytes) "OK" else "TOO BIG"})"
+                )
 
                 stickerFile.writeBytes(encoded)
 
@@ -382,6 +456,39 @@ class MainActivity : FlutterActivity() {
             android.util.Log.d(TAG, "  -> ${file.name} (${file.length()} bytes)")
         }
         return if (stickerCount >= 3) packDir else null
+    }
+
+    private fun copyPreparedStickerAsset(
+        sourceFile: File,
+        packDir: File,
+        stickerIndex: Int,
+        maxSizeBytes: Int
+    ): Boolean {
+        val extension = sourceFile.extension.lowercase()
+        if (extension != "webp") {
+            android.util.Log.e(TAG, "Animated sticker is not a WebP file: ${sourceFile.absolutePath}")
+            return false
+        }
+
+        if (sourceFile.length() > maxSizeBytes) {
+            android.util.Log.e(
+                TAG,
+                "Animated sticker ${sourceFile.absolutePath} exceeds ${maxSizeBytes / 1024}KB"
+            )
+            return false
+        }
+
+        val stickerFile = File(packDir, "sticker_$stickerIndex.webp")
+        sourceFile.copyTo(stickerFile, overwrite = true)
+
+        if (!isValidWebpFile(stickerFile)) {
+            android.util.Log.e(TAG, "Animated sticker produced invalid WebP: ${sourceFile.absolutePath}")
+            stickerFile.delete()
+            return false
+        }
+
+        android.util.Log.d(TAG, "Animated sticker $stickerIndex: ${stickerFile.length()} bytes (OK)")
+        return true
     }
 
     private fun isPreparedPackReusable(identifier: String, sourceSignature: String): Boolean {
@@ -417,7 +524,8 @@ class MainActivity : FlutterActivity() {
         name: String,
         publisher: String,
         stickerPaths: List<String>,
-        trayIconPath: String
+        trayIconPath: String,
+        animatedStickerPack: Boolean
     ): String {
         val digest = MessageDigest.getInstance("SHA-256")
 
@@ -429,6 +537,7 @@ class MainActivity : FlutterActivity() {
         add(identifier)
         add(name)
         add(publisher)
+        add(if (animatedStickerPack) "animated" else "static")
         add(trayIconPath)
         appendFileMetadata(digest, File(trayIconPath))
 

@@ -75,7 +75,8 @@ class _PacksList extends ConsumerWidget {
     final packsAsync = ref.watch(packsProvider);
 
     return packsAsync.when(
-      loading: () => const ShimmerSkeleton(itemCount: 4, layout: ShimmerLayout.list),
+      loading:
+          () => const ShimmerSkeleton(itemCount: 4, layout: ShimmerLayout.list),
       error:
           (error, _) => Center(
             child: Column(
@@ -119,11 +120,17 @@ class _PacksList extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
               if (packs.isNotEmpty)
-                ...packs.asMap().entries.map((entry) =>
-                  _PackListItem(pack: entry.value)
-                    .animate()
-                    .fadeIn(duration: 400.ms, delay: (entry.key * 100).ms)
-                    .slideX(begin: -0.1, end: 0, duration: 400.ms, delay: (entry.key * 100).ms, curve: Curves.easeOutCubic),
+                ...packs.asMap().entries.map(
+                  (entry) => _PackListItem(pack: entry.value)
+                      .animate()
+                      .fadeIn(duration: 400.ms, delay: (entry.key * 100).ms)
+                      .slideX(
+                        begin: -0.1,
+                        end: 0,
+                        duration: 400.ms,
+                        delay: (entry.key * 100).ms,
+                        curve: Curves.easeOutCubic,
+                      ),
                 ),
               const SizedBox(height: 16),
               // Empty state CTA (always visible as a prompt to create more)
@@ -207,13 +214,24 @@ class _PackListItem extends StatelessWidget {
       final file = File(path);
       if (await file.exists()) {
         final raw = await file.readAsBytes();
-        stickerDataList.add(StickerData(data: raw, sourcePath: path));
+        stickerDataList.add(
+          StickerData(
+            data: raw,
+            isAnimated: pack.type.isAnimated,
+            sourcePath: path,
+          ),
+        );
       }
     }
 
     // Pad to minimum 3 stickers with proper 512x512 placeholders
     while (stickerDataList.length < WhatsAppExportService.minStickersPerPack) {
-      stickerDataList.add(StickerData(data: WhatsAppExportService.generatePlaceholderSticker()));
+      stickerDataList.add(
+        StickerData(
+          data: WhatsAppExportService.generatePlaceholderSticker(),
+          isAnimated: pack.type.isAnimated,
+        ),
+      );
     }
 
     // Tray icon
@@ -235,6 +253,7 @@ class _PackListItem extends StatelessWidget {
       stickers: stickerDataList,
       trayIcon: trayIcon,
       trayIconSourcePath: pack.trayIconPath,
+      packIdentifier: pack.id,
     );
 
     if (!context.mounted) return;
@@ -260,97 +279,115 @@ class _PackListItem extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: '${pack.name}, ${pack.stickerPaths.length} stickers. Tap to view, WhatsApp export available',
+      label:
+          '${pack.name}, ${pack.type.label}, ${pack.stickerPaths.length} stickers. Tap to view.',
       child: GestureDetector(
         onTap: () => context.push('/pack/${pack.id}'),
         child: Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: const [
-            BoxShadow(
-              color: AppColors.shadowLight,
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child:
-                      pack.stickerPaths.isNotEmpty
-                          ? ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: Image.file(
-                              File(pack.stickerPaths.first),
-                              width: 56,
-                              height: 56,
-                              fit: BoxFit.cover,
-                              errorBuilder:
-                                  (_, __, ___) => Icon(
-                                    Icons.emoji_emotions_rounded,
-                                    color: color,
-                                    size: 28,
-                                  ),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.shadowLight,
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child:
+                        pack.stickerPaths.isNotEmpty
+                            ? ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.file(
+                                File(pack.stickerPaths.first),
+                                width: 56,
+                                height: 56,
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (_, __, ___) => Icon(
+                                      Icons.emoji_emotions_rounded,
+                                      color: color,
+                                      size: 28,
+                                    ),
+                              ),
+                            )
+                            : Icon(
+                              Icons.emoji_emotions_rounded,
+                              color: color,
+                              size: 28,
                             ),
-                          )
-                          : Icon(
-                            Icons.emoji_emotions_rounded,
-                            color: color,
-                            size: 28,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          pack.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
                           ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        pack.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        '${pack.stickerPaths.length} stickers',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
+                        Text(
+                          '${pack.stickerPaths.length} stickers',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
+                          ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            pack.type.label,
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.edit_rounded,
-                    color: AppColors.textSecondary,
+                  IconButton(
+                    icon: const Icon(
+                      Icons.edit_rounded,
+                      color: AppColors.textSecondary,
+                    ),
+                    onPressed: () => context.push('/pack/${pack.id}'),
                   ),
-                  onPressed: () => context.push('/pack/${pack.id}'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // WhatsApp export button — actually calls export service
-            WhatsAppButton(
-              onPressed: () => _exportToWhatsApp(context),
-            ),
-          ],
-        ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // WhatsApp export button — actually calls export service
+              WhatsAppButton(onPressed: () => _exportToWhatsApp(context)),
+            ],
+          ),
         ),
       ),
     );

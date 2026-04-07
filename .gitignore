@@ -61,3 +61,4 @@ key.properties
 *.jks
 *.keystore
 .secrets/
+play-store-key.json

@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_typography.dart';
+import 'sticker_themes.dart';
 
 abstract class AppTheme {
   static const _borderRadius = 16.0;
   static const _buttonRadius = 28.0;
   static const _cardRadius = 20.0;
+
+  /// Generate a full [ThemeData] from a [StickerThemeData] definition.
+  static ThemeData fromStickerTheme(StickerThemeData theme) =>
+      theme.themeData();
 
   static ThemeData get light => ThemeData(
     useMaterial3: true,

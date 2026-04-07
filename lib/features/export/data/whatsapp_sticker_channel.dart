@@ -19,35 +19,37 @@ class WhatsAppStickerChannel {
   /// [publisher] Author/publisher name
   /// [stickerPaths] List of sticker image file paths (PNG or WebP)
   /// [trayIconPath] Path to the tray icon image
+  /// [animatedStickerPack] Whether the entire pack contains animated stickers
   ///
-  /// The native side converts all images to 512x512 WebP format
-  /// and creates the ContentProvider directory structure WhatsApp expects.
+  /// The native side prepares the ContentProvider directory structure WhatsApp
+  /// expects and marks the pack metadata as static or animated.
   static Future<WhatsAppResult> addStickerPack({
     required String identifier,
     required String name,
     required String publisher,
     required List<String> stickerPaths,
     required String trayIconPath,
+    bool animatedStickerPack = false,
   }) async {
     if (!Platform.isAndroid) {
       return const WhatsAppResult(
         success: false,
-        message: 'WhatsApp sticker packs are only supported on Android. '
+        message:
+            'WhatsApp sticker packs are only supported on Android. '
             'On iOS, stickers will be shared as images.',
       );
     }
 
     try {
-      final result = await _channel.invokeMapMethod<String, dynamic>(
-        'addStickerPackToWhatsApp',
-        {
-          'identifier': identifier,
-          'name': name,
-          'publisher': publisher,
-          'stickerPaths': stickerPaths,
-          'trayIconPath': trayIconPath,
-        },
-      );
+      final result = await _channel
+          .invokeMapMethod<String, dynamic>('addStickerPackToWhatsApp', {
+            'identifier': identifier,
+            'name': name,
+            'publisher': publisher,
+            'stickerPaths': stickerPaths,
+            'trayIconPath': trayIconPath,
+            'animatedStickerPack': animatedStickerPack,
+          });
 
       if (result == null) {
         return const WhatsAppResult(
@@ -77,6 +79,27 @@ class WhatsAppStickerChannel {
       final result = await _channel.invokeMethod<bool>('isWhatsAppInstalled');
       return result ?? false;
     } on PlatformException {
+      return false;
+    }
+  }
+
+  /// Encodes a still image file into a static WebP file on Android.
+  static Future<bool> encodeStaticWebpFrame({
+    required String inputPath,
+    required String outputPath,
+    int quality = 80,
+  }) async {
+    if (!Platform.isAndroid) return false;
+
+    try {
+      final result = await _channel.invokeMethod<bool>('encodeStaticWebpFrame', {
+        'inputPath': inputPath,
+        'outputPath': outputPath,
+        'quality': quality,
+      });
+      return result ?? false;
+    } on PlatformException catch (e) {
+      debugPrint('Static WebP frame encode error: ${e.message}');
       return false;
     }
   }

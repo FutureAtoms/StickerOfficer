@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:sticker_officer/features/export/data/whatsapp_export_service.dart';
@@ -18,7 +17,11 @@ void main() {
   // Helpers
   // ---------------------------------------------------------------------------
 
-  List<StickerData> makeStickers(int count, {int sizeBytes = 1000, bool isAnimated = false}) {
+  List<StickerData> makeStickers(
+    int count, {
+    int sizeBytes = 1000,
+    bool isAnimated = false,
+  }) {
     return List.generate(
       count,
       (_) => StickerData(data: Uint8List(sizeBytes), isAnimated: isAnimated),
@@ -37,6 +40,87 @@ void main() {
       stickers: stickers ?? makeStickers(stickerCount, sizeBytes: stickerSize),
       trayIcon: trayIcon ?? Uint8List(100),
     );
+  }
+
+  List<int> uint32le(int value) => [
+    value & 0xff,
+    (value >> 8) & 0xff,
+    (value >> 16) & 0xff,
+    (value >> 24) & 0xff,
+  ];
+
+  Uint8List makeWebpContainerWithChunks(
+    List<MapEntry<String, List<int>>> chunks,
+  ) {
+    final chunkBytes = BytesBuilder();
+    for (final chunk in chunks) {
+      chunkBytes.add(chunk.key.codeUnits);
+      chunkBytes.add(uint32le(chunk.value.length));
+      chunkBytes.add(chunk.value);
+      if (chunk.value.length.isOdd) {
+        chunkBytes.addByte(0);
+      }
+    }
+
+    final chunkData = chunkBytes.toBytes();
+    final bytes =
+        BytesBuilder()
+          ..add('RIFF'.codeUnits)
+          ..add(uint32le(4 + chunkData.length))
+          ..add('WEBP'.codeUnits)
+          ..add(chunkData);
+    return bytes.toBytes();
+  }
+
+  Uint8List makeWebpContainer(List<String> chunkIds) {
+    final chunkBytes = BytesBuilder();
+    for (final chunkId in chunkIds) {
+      chunkBytes.add(chunkId.codeUnits);
+      chunkBytes.add(uint32le(0));
+    }
+
+    final chunkData = chunkBytes.toBytes();
+    final bytes =
+        BytesBuilder()
+          ..add('RIFF'.codeUnits)
+          ..add(uint32le(4 + chunkData.length))
+          ..add('WEBP'.codeUnits)
+          ..add(chunkData);
+    return bytes.toBytes();
+  }
+
+  List<String> topLevelChunkIds(Uint8List bytes) {
+    final ids = <String>[];
+    var offset = 12;
+    while (offset + 8 <= bytes.length) {
+      ids.add(String.fromCharCodes(bytes.sublist(offset, offset + 4)));
+      final chunkSize =
+          bytes[offset + 4] |
+          (bytes[offset + 5] << 8) |
+          (bytes[offset + 6] << 16) |
+          (bytes[offset + 7] << 24);
+      offset += 8 + chunkSize + (chunkSize.isOdd ? 1 : 0);
+    }
+    return ids;
+  }
+
+  Uint8List chunkPayload(Uint8List bytes, String id) {
+    var offset = 12;
+    while (offset + 8 <= bytes.length) {
+      final chunkId = String.fromCharCodes(bytes.sublist(offset, offset + 4));
+      final chunkSize =
+          bytes[offset + 4] |
+          (bytes[offset + 5] << 8) |
+          (bytes[offset + 6] << 16) |
+          (bytes[offset + 7] << 24);
+      final dataOffset = offset + 8;
+      final dataEnd = dataOffset + chunkSize;
+      if (chunkId == id) {
+        return bytes.sublist(dataOffset, dataEnd);
+      }
+      offset = dataEnd + (chunkSize.isOdd ? 1 : 0);
+    }
+    return Uint8List(0);
   }
 
   // ---------------------------------------------------------------------------
@@ -246,13 +330,16 @@ void main() {
       expect(result.errors, isEmpty);
     });
 
-    test('accepts sticker at 100KB + 1 byte (auto-compressed during export)', () {
-      // validatePack no longer rejects oversized stickers — export pipeline
-      // auto-compresses them to fit.
-      final result = validPack(stickerCount: 3, stickerSize: 100 * 1024 + 1);
+    test(
+      'accepts sticker at 100KB + 1 byte (auto-compressed during export)',
+      () {
+        // validatePack no longer rejects oversized stickers — export pipeline
+        // auto-compresses them to fit.
+        final result = validPack(stickerCount: 3, stickerSize: 100 * 1024 + 1);
 
-      expect(result.isValid, isTrue);
-    });
+        expect(result.isValid, isTrue);
+      },
+    );
 
     test('accepts sticker at 200KB (auto-compressed during export)', () {
       final result = validPack(stickerCount: 3, stickerSize: 200 * 1024);
@@ -317,21 +404,31 @@ void main() {
       expect(result.errors, isEmpty);
     });
 
-    test('accepts animated sticker at 500KB + 1 byte (auto-compressed during export)', () {
-      final result = validPack(
-        stickers: makeStickers(3, sizeBytes: 500 * 1024 + 1, isAnimated: true),
-      );
+    test(
+      'accepts animated sticker at 500KB + 1 byte (auto-compressed during export)',
+      () {
+        final result = validPack(
+          stickers: makeStickers(
+            3,
+            sizeBytes: 500 * 1024 + 1,
+            isAnimated: true,
+          ),
+        );
 
-      expect(result.isValid, isTrue);
-    });
+        expect(result.isValid, isTrue);
+      },
+    );
 
-    test('accepts animated sticker at 400KB (between static and animated limit)', () {
-      final result = validPack(
-        stickers: makeStickers(3, sizeBytes: 400 * 1024, isAnimated: true),
-      );
+    test(
+      'accepts animated sticker at 400KB (between static and animated limit)',
+      () {
+        final result = validPack(
+          stickers: makeStickers(3, sizeBytes: 400 * 1024, isAnimated: true),
+        );
 
-      expect(result.isValid, isTrue);
-    });
+        expect(result.isValid, isTrue);
+      },
+    );
 
     test('accepts static sticker at 200KB (auto-compressed during export)', () {
       // No per-sticker size check in validation anymore
@@ -364,37 +461,43 @@ void main() {
       expect(result.isValid, isTrue);
     });
 
-    test('accepts oversized static sticker in mixed pack (auto-compressed)', () {
-      final stickers = [
-        StickerData(data: Uint8List(200 * 1024), isAnimated: false),
-        StickerData(data: Uint8List(400 * 1024), isAnimated: true),
-        StickerData(data: Uint8List(50 * 1024), isAnimated: false),
-      ];
+    test(
+      'accepts oversized static sticker in mixed pack (auto-compressed)',
+      () {
+        final stickers = [
+          StickerData(data: Uint8List(200 * 1024), isAnimated: false),
+          StickerData(data: Uint8List(400 * 1024), isAnimated: true),
+          StickerData(data: Uint8List(50 * 1024), isAnimated: false),
+        ];
 
-      final result = service.validatePack(
-        name: 'Mixed Pack',
-        stickers: stickers,
-        trayIcon: Uint8List(100),
-      );
+        final result = service.validatePack(
+          name: 'Mixed Pack',
+          stickers: stickers,
+          trayIcon: Uint8List(100),
+        );
 
-      expect(result.isValid, isTrue);
-    });
+        expect(result.isValid, isTrue);
+      },
+    );
 
-    test('accepts oversized animated sticker in mixed pack (auto-compressed)', () {
-      final stickers = [
-        StickerData(data: Uint8List(80 * 1024), isAnimated: false),
-        StickerData(data: Uint8List(600 * 1024), isAnimated: true),
-        StickerData(data: Uint8List(50 * 1024), isAnimated: false),
-      ];
+    test(
+      'accepts oversized animated sticker in mixed pack (auto-compressed)',
+      () {
+        final stickers = [
+          StickerData(data: Uint8List(80 * 1024), isAnimated: false),
+          StickerData(data: Uint8List(600 * 1024), isAnimated: true),
+          StickerData(data: Uint8List(50 * 1024), isAnimated: false),
+        ];
 
-      final result = service.validatePack(
-        name: 'Mixed Pack',
-        stickers: stickers,
-        trayIcon: Uint8List(100),
-      );
+        final result = service.validatePack(
+          name: 'Mixed Pack',
+          stickers: stickers,
+          trayIcon: Uint8List(100),
+        );
 
-      expect(result.isValid, isTrue);
-    });
+        expect(result.isValid, isTrue);
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -439,18 +542,21 @@ void main() {
       expect(result.errors, contains('Tray icon is required'));
     });
 
-    test('reports all errors: empty name, too few stickers, missing tray icon', () {
-      final result = service.validatePack(
-        name: '',
-        stickers: makeStickers(0),
-        trayIcon: null,
-      );
+    test(
+      'reports all errors: empty name, too few stickers, missing tray icon',
+      () {
+        final result = service.validatePack(
+          name: '',
+          stickers: makeStickers(0),
+          trayIcon: null,
+        );
 
-      expect(result.isValid, isFalse);
-      expect(result.errors, contains('Pack name is required'));
-      expect(result.errors.any((e) => e.contains('at least 3')), isTrue);
-      expect(result.errors, contains('Tray icon is required'));
-    });
+        expect(result.isValid, isFalse);
+        expect(result.errors, contains('Pack name is required'));
+        expect(result.errors.any((e) => e.contains('at least 3')), isTrue);
+        expect(result.errors, contains('Tray icon is required'));
+      },
+    );
 
     test('oversized stickers no longer cause validation errors', () {
       final stickers = [
@@ -469,25 +575,28 @@ void main() {
       expect(result.isValid, isTrue);
     });
 
-    test('collects empty name and missing tray errors (but not sticker size)', () {
-      final stickers = [
-        StickerData(data: Uint8List(200 * 1024)),
-        StickerData(data: Uint8List(200 * 1024)),
-        StickerData(data: Uint8List(200 * 1024)),
-      ];
+    test(
+      'collects empty name and missing tray errors (but not sticker size)',
+      () {
+        final stickers = [
+          StickerData(data: Uint8List(200 * 1024)),
+          StickerData(data: Uint8List(200 * 1024)),
+          StickerData(data: Uint8List(200 * 1024)),
+        ];
 
-      final result = service.validatePack(
-        name: '',
-        stickers: stickers,
-        trayIcon: null,
-      );
+        final result = service.validatePack(
+          name: '',
+          stickers: stickers,
+          trayIcon: null,
+        );
 
-      expect(result.isValid, isFalse);
-      // Only pack-level errors: name + tray icon (no sticker size errors)
-      expect(result.errors.length, 2);
-      expect(result.errors, contains('Pack name is required'));
-      expect(result.errors, contains('Tray icon is required'));
-    });
+        expect(result.isValid, isFalse);
+        // Only pack-level errors: name + tray icon (no sticker size errors)
+        expect(result.errors.length, 2);
+        expect(result.errors, contains('Pack name is required'));
+        expect(result.errors, contains('Tray icon is required'));
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -611,8 +720,10 @@ void main() {
       img.fill(testImage, color: img.ColorRgba8(0, 255, 0, 255));
       final input = Uint8List.fromList(img.encodePng(testImage));
 
-      final output =
-          await service.convertToWhatsAppFormat(input, isAnimated: true);
+      final output = await service.convertToWhatsAppFormat(
+        input,
+        isAnimated: true,
+      );
 
       expect(output, isNotEmpty);
     });
@@ -674,7 +785,105 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
-  // 15. Export flow — exportToWhatsApp
+  // 15. Animated WebP detection
+  // ---------------------------------------------------------------------------
+
+  group('webpHasAnimation', () {
+    test('requires more than one ANMF frame', () {
+      final bytes = makeWebpContainer(['VP8X', 'ANIM', 'ANMF', 'ANMF']);
+
+      expect(service.webpHasAnimation(bytes), isTrue);
+    });
+
+    test('returns false for single-frame animated wrapper', () {
+      final bytes = makeWebpContainer(['VP8X', 'ANIM', 'ANMF']);
+
+      expect(service.webpHasAnimation(bytes), isFalse);
+    });
+
+    test('returns false for static WebP container', () {
+      final bytes = makeWebpContainer(['VP8 ']);
+
+      expect(service.webpHasAnimation(bytes), isFalse);
+    });
+
+    test('returns false for invalid bytes', () {
+      expect(service.webpHasAnimation(Uint8List.fromList([1, 2, 3])), isFalse);
+    });
+  });
+
+  group('buildAnimatedWebpFromStillFrames', () {
+    test('builds a two-frame animated WebP container', () {
+      final primary = makeWebpContainerWithChunks([
+        const MapEntry('VP8 ', [1, 2, 3, 4]),
+      ]);
+      final repair = makeWebpContainerWithChunks([
+        const MapEntry('VP8 ', [5, 6, 7, 8]),
+      ]);
+
+      final output = service.buildAnimatedWebpFromStillFrames(
+        primaryFrameWebp: primary,
+        primaryFrameWidth: 512,
+        primaryFrameHeight: 512,
+        repairFrameWebp: repair,
+        repairFrameWidth: 1,
+        repairFrameHeight: 1,
+      );
+
+      expect(output, isNotNull);
+      expect(topLevelChunkIds(output!), ['VP8X', 'ANIM', 'ANMF', 'ANMF']);
+      expect(service.webpHasAnimation(output), isTrue);
+    });
+
+    test('carries alpha flag into VP8X when a source frame has alpha', () {
+      final primary = makeWebpContainerWithChunks([
+        const MapEntry('VP8X', [0x10, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        const MapEntry('ALPH', [9, 9, 9, 9]),
+        const MapEntry('VP8 ', [1, 2, 3, 4]),
+      ]);
+      final repair = makeWebpContainerWithChunks([
+        const MapEntry('VP8 ', [5, 6, 7, 8]),
+      ]);
+
+      final output = service.buildAnimatedWebpFromStillFrames(
+        primaryFrameWebp: primary,
+        primaryFrameWidth: 512,
+        primaryFrameHeight: 512,
+        repairFrameWebp: repair,
+        repairFrameWidth: 1,
+        repairFrameHeight: 1,
+      );
+
+      expect(output, isNotNull);
+      final vp8x = chunkPayload(output!, 'VP8X');
+      expect(vp8x, isNotEmpty);
+      expect(vp8x.first & 0x02, 0x02);
+      expect(vp8x.first & 0x10, 0x10);
+    });
+
+    test('returns null when a source frame lacks image payload', () {
+      final invalidPrimary = makeWebpContainerWithChunks([
+        const MapEntry('VP8X', [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+      ]);
+      final repair = makeWebpContainerWithChunks([
+        const MapEntry('VP8 ', [5, 6, 7, 8]),
+      ]);
+
+      final output = service.buildAnimatedWebpFromStillFrames(
+        primaryFrameWebp: invalidPrimary,
+        primaryFrameWidth: 512,
+        primaryFrameHeight: 512,
+        repairFrameWebp: repair,
+        repairFrameWidth: 1,
+        repairFrameHeight: 1,
+      );
+
+      expect(output, isNull);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // 16. Export flow — exportToWhatsApp
   // ---------------------------------------------------------------------------
 
   group('exportToWhatsApp', () {
@@ -732,20 +941,23 @@ void main() {
       expect(result.message, contains('at most 30'));
     });
 
-    test('oversized stickers pass validation (auto-compressed during export)', () async {
-      // Oversized stickers are no longer rejected at validation — they're
-      // auto-compressed by the export pipeline.
-      final result = await service.exportToWhatsApp(
-        packName: 'Test Pack',
-        packAuthor: 'Author',
-        stickers: makeStickers(3, sizeBytes: 200 * 1024),
-        trayIcon: Uint8List(100),
-      );
+    test(
+      'oversized stickers pass validation (auto-compressed during export)',
+      () async {
+        // Oversized stickers are no longer rejected at validation — they're
+        // auto-compressed by the export pipeline.
+        final result = await service.exportToWhatsApp(
+          packName: 'Test Pack',
+          packAuthor: 'Author',
+          stickers: makeStickers(3, sizeBytes: 200 * 1024),
+          trayIcon: Uint8List(100),
+        );
 
-      // Passes validation but fails on platform API in test env
-      expect(result.success, isFalse);
-      expect(result.message, isNot(contains('exceeds max size')));
-    });
+        // Passes validation but fails on platform API in test env
+        expect(result.success, isFalse);
+        expect(result.message, isNot(contains('exceeds max size')));
+      },
+    );
 
     test('returns only the first error message on failure', () async {
       // Empty name AND too few stickers — should return only the first error.
@@ -785,36 +997,56 @@ void main() {
       expect(result.message, contains('Export failed'));
     });
 
-    test('valid pack with small tray icon fails gracefully in test env',
-        () async {
+    test(
+      'valid pack with small tray icon fails gracefully in test env',
+      () async {
+        final result = await service.exportToWhatsApp(
+          packName: 'Pack',
+          packAuthor: 'Author',
+          stickers: makeStickers(3),
+          trayIcon: Uint8List(1),
+        );
+
+        expect(result.success, isFalse);
+        expect(result.message, contains('Export failed'));
+      },
+    );
+
+    test(
+      'packAuthor does not affect validation — fails on platform in test',
+      () async {
+        final result = await service.exportToWhatsApp(
+          packName: 'Pack',
+          packAuthor: '',
+          stickers: makeStickers(3),
+          trayIcon: Uint8List(100),
+        );
+
+        // Passes validation (empty author is fine), fails on platform
+        expect(result.success, isFalse);
+        expect(result.message, contains('Export failed'));
+      },
+    );
+
+    test('rejects mixed static and animated stickers before export', () async {
       final result = await service.exportToWhatsApp(
-        packName: 'Pack',
+        packName: 'Mixed Pack',
         packAuthor: 'Author',
-        stickers: makeStickers(3),
-        trayIcon: Uint8List(1),
-      );
-
-      expect(result.success, isFalse);
-      expect(result.message, contains('Export failed'));
-    });
-
-    test('packAuthor does not affect validation — fails on platform in test',
-        () async {
-      final result = await service.exportToWhatsApp(
-        packName: 'Pack',
-        packAuthor: '',
-        stickers: makeStickers(3),
+        stickers: [
+          StickerData(data: Uint8List(1000)),
+          StickerData(data: Uint8List(1000), isAnimated: true),
+          StickerData(data: Uint8List(1000)),
+        ],
         trayIcon: Uint8List(100),
       );
 
-      // Passes validation (empty author is fine), fails on platform
       expect(result.success, isFalse);
-      expect(result.message, contains('Export failed'));
+      expect(result.message, contains('either photos or animated'));
     });
   });
 
   // ---------------------------------------------------------------------------
-  // 16. Boundary combination tests
+  // 17. Boundary combination tests
   // ---------------------------------------------------------------------------
 
   group('Boundary combinations', () {

@@ -42,8 +42,40 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
   }
 
   Future<void> _pickImages() async {
+    // Load current pack
+    final repo = ref.read(packRepositoryProvider);
+    final pack = repo.getPack(widget.packId);
+    if (pack == null) {
+      if (mounted) Navigator.of(context).maybePop();
+      return;
+    }
+
+    if (pack.type.isAnimated) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'This pack only accepts animated video stickers.',
+            ),
+            backgroundColor: AppColors.coral,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+        Navigator.of(context).maybePop();
+      }
+      return;
+    }
+
+    _localPack = pack;
+
+    // Enforce 30-sticker cap
+    final available =
+        StickerGuardrails.maxStickersPerPack - pack.stickerPaths.length;
     final pickerService = ref.read(imagePickerServiceProvider);
-    final files = await pickerService.pickMultiImage();
+    final files = await pickerService.pickMultiImage(limit: available);
 
     if (!mounted) return;
 
@@ -53,18 +85,6 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
       return;
     }
 
-    // Load current pack
-    final repo = ref.read(packRepositoryProvider);
-    final pack = repo.getPack(widget.packId);
-    if (pack == null) {
-      if (mounted) Navigator.of(context).maybePop();
-      return;
-    }
-
-    _localPack = pack;
-
-    // Enforce 30-sticker cap
-    final available = StickerGuardrails.maxStickersPerPack - pack.stickerPaths.length;
     var paths = files.map((f) => f.path).toList();
 
     if (paths.length > available) {
@@ -79,7 +99,9 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
             content: const Text('This pack is already full (30 stickers)'),
             backgroundColor: AppColors.coral,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
         Navigator.of(context).maybePop();
@@ -101,7 +123,9 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
           ),
           backgroundColor: Colors.orange,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -117,12 +141,10 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
     final savedPath = await Navigator.push<String?>(
       context,
       MaterialPageRoute(
-        builder: (_) => ProviderScope(
-          child: EditorScreen(
-            imagePath: item.originalPath,
-            bulkMode: true,
-          ),
-        ),
+        builder:
+            (_) => ProviderScope(
+              child: EditorScreen(imagePath: item.originalPath, bulkMode: true),
+            ),
       ),
     );
 
@@ -149,7 +171,10 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
     });
   }
 
-  Future<void> _processItem(BulkEditItemStatus status, {String? tempPath}) async {
+  Future<void> _processItem(
+    BulkEditItemStatus status, {
+    String? tempPath,
+  }) async {
     final queue = _queue!;
     final item = queue.currentItem!;
 
@@ -200,7 +225,9 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
             content: Text('Failed to process sticker: $e'),
             backgroundColor: AppColors.coral,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -223,24 +250,25 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
 
     final shouldLeave = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Leave Editing?'),
-        content: Text(
-          'You have $remaining images remaining. '
-          '${saved > 0 ? '$saved stickers already saved to this pack will stay. ' : ''}'
-          'Leave editing?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Continue Editing'),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Leave Editing?'),
+            content: Text(
+              'You have $remaining images remaining. '
+              '${saved > 0 ? '$saved stickers already saved to this pack will stay. ' : ''}'
+              'Leave editing?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Continue Editing'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Leave'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Leave'),
-          ),
-        ],
-      ),
     );
 
     return shouldLeave ?? false;
@@ -310,8 +338,7 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
       children: [
         BulkEditProgress(queue: queue),
         Expanded(child: _buildCurrentItemView(queue)),
-        if (_isProcessing)
-          const LinearProgressIndicator(),
+        if (_isProcessing) const LinearProgressIndicator(),
         _buildActionBar(),
       ],
     );
@@ -327,12 +354,13 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
           child: Image.file(
             File(item.originalPath),
             fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => Container(
-              width: 200,
-              height: 200,
-              color: AppColors.pastels[0],
-              child: const Icon(Icons.broken_image_rounded, size: 48),
-            ),
+            errorBuilder:
+                (_, __, ___) => Container(
+                  width: 200,
+                  height: 200,
+                  color: AppColors.pastels[0],
+                  child: const Icon(Icons.broken_image_rounded, size: 48),
+                ),
           ),
         ),
       ),
@@ -393,28 +421,36 @@ class _BulkEditScreenState extends ConsumerState<BulkEditScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              total > 0 ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+              total > 0
+                  ? Icons.check_circle_rounded
+                  : Icons.info_outline_rounded,
               size: 64,
               color: total > 0 ? AppColors.teal : AppColors.textSecondary,
             ),
             const SizedBox(height: 16),
             Text(
               total > 0 ? '$total stickers added!' : 'No stickers added',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             if (edited > 0)
-              Text('$edited edited', style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                '$edited edited',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             if (skipped > 0)
-              Text('$skipped used as-is', style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                '$skipped used as-is',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             if (removed > 0)
               Text(
                 '$removed removed',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                  color: AppColors.textSecondary,
+                ),
               ),
             const SizedBox(height: 24),
             BubblyButton(

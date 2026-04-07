@@ -45,7 +45,9 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
           content: const Text('Please describe what sticker you want!'),
           backgroundColor: AppColors.coral,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -71,7 +73,9 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
             ),
             backgroundColor: AppColors.coral,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       } else {
@@ -85,7 +89,9 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
           content: Text('Generation failed: $e'),
           backgroundColor: AppColors.coral,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     } finally {
@@ -150,6 +156,7 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
         id: uuid.v4(),
         name: packName.trim(),
         authorName: 'Me',
+        type: StickerPackType.staticPack,
         stickerPaths: [filePath],
         trayIconPath: filePath,
         createdAt: DateTime.now(),
@@ -186,6 +193,7 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
         id: uuid.v4(),
         name: packName.trim(),
         authorName: 'Me',
+        type: StickerPackType.staticPack,
         stickerPaths: paths,
         trayIconPath: paths.first,
         createdAt: DateTime.now(),
@@ -322,52 +330,62 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
           itemCount: stickers.length,
           itemBuilder: (context, index) {
             return Semantics(
-              button: true,
-              label: 'Generated sticker ${index + 1} of ${stickers.length}. Tap to edit or save.',
-              child: GestureDetector(
-                onTap: () => _showStickerOptions(stickers[index]),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.pastels[index % AppColors.pastels.length],
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.transparent, width: 3),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(17),
-                    child: Image.memory(
-                      stickers[index],
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.broken_image_rounded,
-                                size: 40,
-                                color: AppColors.purple.withValues(alpha: 0.4),
+                  button: true,
+                  label:
+                      'Generated sticker ${index + 1} of ${stickers.length}. Tap to edit or save.',
+                  child: GestureDetector(
+                    onTap: () => _showStickerOptions(stickers[index]),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color:
+                            AppColors.pastels[index % AppColors.pastels.length],
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.transparent, width: 3),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(17),
+                        child: Image.memory(
+                          stickers[index],
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.broken_image_rounded,
+                                    size: 40,
+                                    color: AppColors.purple.withValues(
+                                      alpha: 0.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Failed to load',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Failed to load',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            )
-            .animate()
-            .fadeIn(duration: 400.ms, delay: (index * 100).ms)
-            .scale(begin: const Offset(0.8, 0.8), end: const Offset(1, 1), duration: 400.ms, delay: (index * 100).ms, curve: Curves.easeOutBack);
+                )
+                .animate()
+                .fadeIn(duration: 400.ms, delay: (index * 100).ms)
+                .scale(
+                  begin: const Offset(0.8, 0.8),
+                  end: const Offset(1, 1),
+                  duration: 400.ms,
+                  delay: (index * 100).ms,
+                  curve: Curves.easeOutBack,
+                );
           },
         ),
         const SizedBox(height: 16),
@@ -466,37 +484,42 @@ class _AiPromptScreenState extends ConsumerState<AiPromptScreen> {
                     final s = entry.value;
                     final i = entry.key;
                     return Semantics(
-                      button: true,
-                      label: 'Suggestion: $s',
-                      child: GestureDetector(
-                        onTap: () {
-                          _controller.text = s;
-                          ref.read(aiPromptProvider.notifier).state = s;
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color:
-                                AppColors.pastels[s.hashCode.abs() %
-                                    AppColors.pastels.length],
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            s,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
+                          button: true,
+                          label: 'Suggestion: $s',
+                          child: GestureDetector(
+                            onTap: () {
+                              _controller.text = s;
+                              ref.read(aiPromptProvider.notifier).state = s;
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color:
+                                    AppColors.pastels[s.hashCode.abs() %
+                                        AppColors.pastels.length],
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                s,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    )
-                    .animate()
-                    .fadeIn(duration: 400.ms, delay: (i * 60).ms)
-                    .slideX(begin: 0.1, end: 0, duration: 400.ms, delay: (i * 60).ms);
+                        )
+                        .animate()
+                        .fadeIn(duration: 400.ms, delay: (i * 60).ms)
+                        .slideX(
+                          begin: 0.1,
+                          end: 0,
+                          duration: 400.ms,
+                          delay: (i * 60).ms,
+                        );
                   }).toList(),
             ),
             const SizedBox(height: 24),

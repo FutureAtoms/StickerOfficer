@@ -1,0 +1,9 @@
+Welcome to StickerOfficer v1.0.0!
+
+- Create stickers from photos, AI, or videos
+- Animated sticker editor with text overlays
+- Video to sticker conversion
+- One-tap WhatsApp export
+- Sticker packs with community sharing
+- Bulk editing for fast pack creation
+- Weekly sticker challenges

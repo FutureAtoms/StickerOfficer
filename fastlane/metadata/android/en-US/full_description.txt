@@ -1,34 +1,49 @@
-StickerOfficer is the easiest way to create custom sticker packs and add them directly to WhatsApp.
+StickerOfficer is the ultimate sticker maker for WhatsApp and Telegram. Create stunning stickers from your photos, AI-generated art, or videos in seconds!
 
-USE AI TO CREATE STICKERS
-Type a description and watch AI generate unique stickers for you. From funny reactions to cute animals, create any sticker you can imagine.
+KEY FEATURES:
 
-BUILD YOUR OWN PACKS
-Organize your stickers into packs of up to 30. Import photos from your gallery, use the built-in editor to crop and adjust, or generate stickers with AI.
+STICKER EDITOR
+- Crop, resize, and rotate images to perfect 512x512 sticker format
+- Add text overlays with 10+ animation styles (bounce, wave, glow, neon, and more)
+- Apply filters and adjust brightness, contrast, and saturation
+- Draw freehand with smooth brush strokes
+- Background removal for clean sticker cutouts
 
-ONE-TAP WHATSAPP EXPORT
-Add your sticker packs to WhatsApp with a single tap. Your packs appear in WhatsApp's sticker tray, ready to send in any chat.
+AI STICKER GENERATOR
+- Type a prompt, get a unique sticker in seconds
+- Powered by advanced AI image generation
+- Perfect for memes, reactions, and custom expressions
 
-DISCOVER AND SHARE
-Browse trending sticker packs from the community. Like and download packs created by others. Join weekly challenges to show off your creativity.
+ANIMATED STICKERS & VIDEO TO STICKER
+- Convert short videos into animated WebP/GIF stickers
+- Import GIFs and customize them with text overlays
+- Frame-by-frame editor with FPS control
+- Automatic size optimization for WhatsApp (under 500KB)
 
-POWERFUL EDITOR
-Remove backgrounds automatically, apply filters, add text overlays, and adjust your stickers until they're perfect. Bulk edit multiple images at once.
+STICKER PACKS
+- Organize stickers into themed packs
+- One-tap export to WhatsApp
+- Share packs with friends via links
+- Browse trending and community sticker packs
 
-WEEKLY CHALLENGES
-Compete in themed sticker challenges. Submit your best pack, vote for favorites, and see who wins.
+BULK EDITING
+- Select multiple images at once
+- Edit each one sequentially
+- Perfect for creating full packs quickly
 
-FEATURES:
-- AI sticker generation from text prompts
-- Built-in sticker editor with background removal
-- WhatsApp sticker pack integration (Android)
-- Community feed with trending packs
-- Weekly creative challenges
-- Bulk image editing
-- Photo import from gallery or camera
-- Video-to-sticker conversion
+COMMUNITY
+- Discover trending sticker packs from other creators
+- Like, download, and share your favorites
+- Weekly sticker challenges with community voting
+
+WHATSAPP INTEGRATION
+- Seamless one-tap export to WhatsApp
+- Automatic format conversion (512x512 WebP)
+- Supports both static and animated stickers
 
 FREE TO USE
-Create and export unlimited sticker packs. No account required — start creating immediately.
+- No watermarks on your stickers
+- Create unlimited sticker packs
+- Works offline for editing (AI features need internet)
 
-StickerOfficer respects your privacy. No email or personal data required. See our privacy policy for details.
+Made with love by FutureAtoms in the Netherlands.

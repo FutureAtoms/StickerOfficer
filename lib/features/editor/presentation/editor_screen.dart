@@ -233,7 +233,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
     try {
       final uiImage = await _decodeUiImage(bytes);
       final pixelData =
-          await uiImage.toByteData(format: ui.ImageByteFormat.rawStraightRgba) ??
+          await uiImage.toByteData(
+            format: ui.ImageByteFormat.rawStraightRgba,
+          ) ??
           await uiImage.toByteData(format: ui.ImageByteFormat.rawRgba);
       if (pixelData == null) {
         throw Exception('Unable to extract image pixels');
@@ -253,10 +255,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         order: img.ChannelOrder.rgba,
       );
       if (kDebugMode) {
-        final sample = bitmap.getPixel(
-          bitmap.width ~/ 2,
-          bitmap.height ~/ 2,
-        );
+        final sample = bitmap.getPixel(bitmap.width ~/ 2, bitmap.height ~/ 2);
         debugPrint(
           'Editor UI decode ${bitmap.width}x${bitmap.height} '
           'center=${sample.r.toInt()},${sample.g.toInt()},${sample.b.toInt()},${sample.a.toInt()}',
@@ -265,7 +264,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       return _DecodedEditorImage(bitmap: bitmap, uiImage: uiImage);
     } catch (error) {
       if (kDebugMode) {
-        debugPrint('Editor UI decode failed, falling back to package:image: $error');
+        debugPrint(
+          'Editor UI decode failed, falling back to package:image: $error',
+        );
       }
       final fallback = img.decodeImage(bytes);
       if (fallback == null) {
@@ -1339,7 +1340,9 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
 
   Future<void> _showSaveToPackDialog(String stickerPath) async {
     final packsAsync = ref.read(packsProvider);
-    final existingPacks = packsAsync.valueOrNull ?? [];
+    final existingPacks = (packsAsync.valueOrNull ?? [])
+        .where((pack) => pack.type == StickerPackType.staticPack)
+        .toList(growable: false);
     final nameController = TextEditingController(text: 'My Stickers');
 
     // Pre-select target pack if passed from pack detail screen
@@ -1458,6 +1461,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
         id: const Uuid().v4(),
         name: packName,
         authorName: 'Me',
+        type: StickerPackType.staticPack,
         stickerPaths: [stickerPath],
         createdAt: DateTime.now(),
       );
@@ -1579,14 +1583,21 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       final file = File(path);
       if (await file.exists()) {
         stickerDataList.add(
-          StickerData(data: await file.readAsBytes(), sourcePath: path),
+          StickerData(
+            data: await file.readAsBytes(),
+            isAnimated: pack.type.isAnimated,
+            sourcePath: path,
+          ),
         );
       }
     }
 
     while (stickerDataList.length < WhatsAppExportService.minStickersPerPack) {
       stickerDataList.add(
-        StickerData(data: WhatsAppExportService.generatePlaceholderSticker()),
+        StickerData(
+          data: WhatsAppExportService.generatePlaceholderSticker(),
+          isAnimated: pack.type.isAnimated,
+        ),
       );
     }
 
@@ -1603,6 +1614,7 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
       stickers: stickerDataList,
       trayIcon: trayIcon,
       trayIconSourcePath: pack.trayIconPath,
+      packIdentifier: pack.id,
     );
 
     if (!mounted) return;
@@ -1714,9 +1726,10 @@ class _EditorScreenState extends ConsumerState<EditorScreen> {
             _isCropping ? Icons.close_fullscreen_rounded : Icons.close_rounded,
           ),
           tooltip: _isCropping ? 'Cancel Crop' : 'Close Editor',
-          onPressed: _isCropping
-              ? _cancelCropMode
-              : widget.bulkMode
+          onPressed:
+              _isCropping
+                  ? _cancelCropMode
+                  : widget.bulkMode
                   ? () => Navigator.pop(context, null)
                   : () => context.pop(),
         ),

@@ -1,7 +1,7 @@
 name: sticker_officer
 description: AI-powered sticker maker — create, share, and discover stickers for WhatsApp & Telegram.
 publish_to: 'none'
-version: 1.0.2+4
+version: 1.1.0+5
 
 environment:
   sdk: '>=3.7.0 <4.0.0'

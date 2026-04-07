@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_provider.dart';
 import 'data/providers.dart';
 import 'features/import/data/shared_sticker_import_channel.dart';
 import 'features/import/data/shared_sticker_import_service.dart';
@@ -25,8 +26,12 @@ class _StickerOfficerAppState extends ConsumerState<StickerOfficerApp> {
     super.initState();
     SharedStickerImportChannel.setListener(_enqueueImport);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final pending = await SharedStickerImportChannel.getPendingFiles();
-      await _enqueueImport(pending);
+      try {
+        final pending = await SharedStickerImportChannel.getPendingFiles();
+        await _enqueueImport(pending);
+      } catch (_) {
+        // Platform channel may not be ready on first launch
+      }
     });
   }
 
@@ -112,13 +117,14 @@ class _StickerOfficerAppState extends ConsumerState<StickerOfficerApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
+    final stickerTheme = ref.watch(stickerThemeProvider);
 
     return MaterialApp.router(
       title: 'StickerOfficer',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: AppTheme.fromStickerTheme(stickerTheme),
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
+      themeMode: stickerTheme.isDark ? ThemeMode.dark : ThemeMode.light,
       scaffoldMessengerKey: _scaffoldMessengerKey,
       routerConfig: router,
     );
