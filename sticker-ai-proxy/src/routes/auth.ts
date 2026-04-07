@@ -365,7 +365,7 @@ async function verifyAppleToken(
     if (!jwks) return null;
 
     const matchingKey = jwks.keys.find(
-      (k: { kid: string }) => k.kid === header.kid,
+      (k) => (k as { kid: string }).kid === header.kid,
     );
     if (!matchingKey) return null;
 

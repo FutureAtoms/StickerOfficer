@@ -193,7 +193,7 @@ void main() {
   // ===========================================================================
 
   group('ChallengesScreen', () {
-    final _testChallenges = [
+    final testChallenges = [
       Challenge(
         id: 'c1',
         title: 'Meme Madness',
@@ -226,7 +226,7 @@ void main() {
         ProviderScope(
           overrides: [
             sharedPreferencesProvider.overrideWithValue(_prefs),
-            challengesProvider.overrideWith((_) async => _testChallenges),
+            challengesProvider.overrideWith((_) async => testChallenges),
           ],
           child: const MaterialApp(home: ChallengesScreen()),
         ),
