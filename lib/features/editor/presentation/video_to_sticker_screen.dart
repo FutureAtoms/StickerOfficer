@@ -21,7 +21,14 @@ import '../../../core/widgets/video_trim_scrubber.dart';
 const _kMaxClipDurationMs = StickerGuardrails.videoMaxDurationMs;
 
 class VideoToStickerScreen extends ConsumerStatefulWidget {
-  const VideoToStickerScreen({super.key});
+  final String? initialVideoPath;
+  final bool bulkMode;
+
+  const VideoToStickerScreen({
+    super.key,
+    this.initialVideoPath,
+    this.bulkMode = false,
+  });
 
   @override
   ConsumerState<VideoToStickerScreen> createState() =>
@@ -53,6 +60,17 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
 
   // Temp directory for this session
   String? _sessionTempPath;
+
+  @override
+  void initState() {
+    super.initState();
+    final initialVideoPath = widget.initialVideoPath;
+    if (initialVideoPath != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadVideoPath(initialVideoPath);
+      });
+    }
+  }
 
   void _videoListener() {
     if (!mounted || _videoController == null) return;
@@ -114,39 +132,53 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
     try {
       final video = await _picker.pickVideo(source: ImageSource.gallery);
       if (video == null) return;
+      await _loadVideoPath(video.path);
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showSnackBar("Couldn't load video — try another!", AppColors.coral);
+    }
+  }
 
-      setState(() {
-        _isLoading = true;
-        _thumbnails.clear();
-      });
+  Future<void> _loadVideoPath(String path) async {
+    setState(() {
+      _isLoading = true;
+      _thumbnails.clear();
+    });
 
-      final controller = VideoPlayerController.file(File(video.path));
+    try {
+      final controller = VideoPlayerController.file(File(path));
       await controller.initialize();
 
       final durationMs = controller.value.duration.inMilliseconds;
 
-      // Set initial trim to first 5s or full video if shorter
       double trimEnd = 1.0;
       if (durationMs > _kMaxClipDurationMs) {
         trimEnd = _kMaxClipDurationMs / durationMs;
       }
 
       _videoController?.removeListener(_videoListener);
-      _videoController?.dispose();
+      await _videoController?.dispose();
       controller.addListener(_videoListener);
+
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
 
       setState(() {
         _videoController = controller;
-        _videoPath = video.path;
+        _videoPath = path;
         _trimStart = 0.0;
         _trimEnd = trimEnd;
         _isLoading = false;
       });
 
-      _generateThumbnails();
-    } catch (e) {
-      setState(() => _isLoading = false);
-      _showSnackBar("Couldn't load video — try another!", AppColors.coral);
+      await _generateThumbnails();
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showSnackBar("Couldn't load video — try another!", AppColors.coral);
+      }
     }
   }
 
@@ -181,8 +213,8 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
       final returnCode = await session.getReturnCode();
 
       if (ReturnCode.isSuccess(returnCode)) {
-        final thumbFiles = thumbDir.listSync()
-          ..sort((a, b) => a.path.compareTo(b.path));
+        final thumbFiles =
+            thumbDir.listSync()..sort((a, b) => a.path.compareTo(b.path));
 
         final thumbBytes = <Uint8List>[];
         for (final file in thumbFiles) {
@@ -273,11 +305,13 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
             '-vf "$scaleFilter,palettegen=max_colors=$colors:reserve_transparent=1" '
             '-y "$palettePath"';
 
-        final paletteSession = await FFmpegKit.execute(paletteCmd)
-            .timeout(const Duration(seconds: 30), onTimeout: () {
-          FFmpegKit.cancel();
-          throw TimeoutException('Palette generation timed out');
-        });
+        final paletteSession = await FFmpegKit.execute(paletteCmd).timeout(
+          const Duration(seconds: 30),
+          onTimeout: () {
+            FFmpegKit.cancel();
+            throw TimeoutException('Palette generation timed out');
+          },
+        );
         if (_cancelRequested) break;
 
         final paletteRc = await paletteSession.getReturnCode();
@@ -295,11 +329,13 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
             '-lavfi "$scaleFilter[v];[v][1:v]paletteuse=dither=floyd_steinberg" '
             '-y "$outputPath"';
 
-        final encodeSession = await FFmpegKit.execute(encodeCmd)
-            .timeout(const Duration(seconds: 30), onTimeout: () {
-          FFmpegKit.cancel();
-          throw TimeoutException('GIF encoding timed out');
-        });
+        final encodeSession = await FFmpegKit.execute(encodeCmd).timeout(
+          const Duration(seconds: 30),
+          onTimeout: () {
+            FFmpegKit.cancel();
+            throw TimeoutException('GIF encoding timed out');
+          },
+        );
         if (_cancelRequested) break;
 
         final encodeRc = await encodeSession.getReturnCode();
@@ -364,11 +400,18 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
 
       // Navigate to animated editor with video-sourced data
       final fps = StickerGuardrails.qualityFpsStops[qualityIdx];
-      context.push('/animated-editor', extra: {
-        'frames': framePaths,
-        'gifPath': gifPath,
-        'fps': fps,
-      });
+      final savedPath = await context.push<String?>(
+        '/animated-editor',
+        extra: {
+          'frames': framePaths,
+          'gifPath': gifPath,
+          'fps': fps,
+          'bulkMode': widget.bulkMode,
+        },
+      );
+      if (widget.bulkMode && mounted) {
+        context.pop(savedPath);
+      }
     } catch (e) {
       if (mounted) {
         _showSnackBar(
@@ -446,9 +489,10 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
       body: Stack(
         children: [
           SafeArea(
-            child: _videoController == null
-                ? _buildPickerState(theme)
-                : _buildEditorState(theme),
+            child:
+                _videoController == null
+                    ? _buildPickerState(theme)
+                    : _buildEditorState(theme),
           ),
           if (_isConverting) _buildConversionOverlay(theme),
         ],
@@ -572,48 +616,48 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
           const SizedBox(height: 8),
           _isGeneratingThumbnails
               ? const SizedBox(
-                  height: 80,
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                height: 80,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Generating preview...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
                         ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Generating preview...',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                )
-              : VideoTrimScrubber(
-                  thumbnails: _thumbnails,
-                  videoDurationMs:
-                      controller.value.duration.inMilliseconds,
-                  maxSelectionMs: _kMaxClipDurationMs,
-                  minSelectionMs: 500,
-                  selectionStart: _trimStart,
-                  selectionEnd: _trimEnd,
-                  playbackPosition: controller.value.isInitialized
-                      ? (controller.value.position.inMilliseconds /
-                              controller.value.duration.inMilliseconds)
-                          .clamp(0.0, 1.0)
-                      : 0.0,
-                  onSelectionChanged: (range) {
-                    setState(() {
-                      _trimStart = range.start;
-                      _trimEnd = range.end;
-                    });
-                  },
                 ),
+              )
+              : VideoTrimScrubber(
+                thumbnails: _thumbnails,
+                videoDurationMs: controller.value.duration.inMilliseconds,
+                maxSelectionMs: _kMaxClipDurationMs,
+                minSelectionMs: 500,
+                selectionStart: _trimStart,
+                selectionEnd: _trimEnd,
+                playbackPosition:
+                    controller.value.isInitialized
+                        ? (controller.value.position.inMilliseconds /
+                                controller.value.duration.inMilliseconds)
+                            .clamp(0.0, 1.0)
+                        : 0.0,
+                onSelectionChanged: (range) {
+                  setState(() {
+                    _trimStart = range.start;
+                    _trimEnd = range.end;
+                  });
+                },
+              ),
           const SizedBox(height: 20),
 
           // Quality slider
@@ -665,8 +709,7 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
             ),
             const Spacer(),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: AppColors.purple.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
@@ -686,8 +729,7 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
           children: [
             const Text(
               'Crisp',
-              style:
-                  TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),
             Expanded(
               child: Slider(
@@ -696,14 +738,12 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
                 max: 4,
                 divisions: 4,
                 activeColor: AppColors.purple,
-                onChanged: (v) =>
-                    setState(() => _qualityIndex = v.round()),
+                onChanged: (v) => setState(() => _qualityIndex = v.round()),
               ),
             ),
             const Text(
               'Smooth',
-              style:
-                  TextStyle(fontSize: 11, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -726,8 +766,10 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
   Widget _buildSizeEstimate(ThemeData theme) {
     final estimateKB = _estimatedSizeKB;
     final estimateBytes = (estimateKB * 1024).round();
-    final status =
-        StickerGuardrails.sizeStatus(estimateBytes, isAnimated: true);
+    final status = StickerGuardrails.sizeStatus(
+      estimateBytes,
+      isAnimated: true,
+    );
     final color = StickerGuardrails.sizeColor(status);
     final fraction = (estimateKB / 500).clamp(0.0, 1.0);
 
@@ -746,8 +788,7 @@ class _VideoToStickerScreenState extends ConsumerState<VideoToStickerScreen> {
             ),
             const Spacer(),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
